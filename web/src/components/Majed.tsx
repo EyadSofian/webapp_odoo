@@ -1,125 +1,79 @@
 import { useEffect, useRef, useState } from 'react'
-import { motion, useReducedMotion } from 'framer-motion'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
+import { useI18n } from '../lib/i18n'
 
 /**
- * Majed, Engosoft's learning advisor, peeks over the top edge of the login card,
- * holds on with both hands, and waves. Tap him (or hover on desktop) to wave again.
- * The image is the head and shoulders only, so the hands are drawn here in his skin tone.
+ * Majed, Engosoft's learning advisor, rises from behind the login card and says hello.
+ * Only his own artwork is used (no drawn limbs); the greeting is a small speech bubble.
+ * He greets again every few seconds and when tapped or hovered. Reduced motion shows him still.
  */
 
-const SKIN = '#ca8563'
-const SKIN_SHADE = '#b5694a'
-const SKIN_LINE = '#9a5236'
-const SLEEVE = '#f4f2f2'
-const SLEEVE_SHADE = '#d5d0d0'
-
-type Phase = 'hidden' | 'peek' | 'wave'
-
-/** Four fingers curled over the card edge. */
-function GripHand({ flip }: { flip?: boolean }) {
-  return (
-    <svg viewBox="0 0 30 20" className="h-[20px] w-[30px]" style={flip ? { transform: 'scaleX(-1)' } : undefined} aria-hidden>
-      {[1, 8, 15, 22].map((x, i) => (
-        <g key={x}>
-          <rect x={x} y={i === 0 || i === 3 ? 3 : 1} width="7" height={i === 0 || i === 3 ? 15 : 17} rx="3.5" fill={SKIN} stroke={SKIN_LINE} strokeWidth="0.8" />
-          <rect x={x + 1.6} y={i === 0 || i === 3 ? 13 : 13} width="3.8" height="3.4" rx="1.6" fill={SKIN_SHADE} opacity="0.55" />
-        </g>
-      ))}
-    </svg>
-  )
-}
-
-/** Open hand on a white thobe sleeve, drawn upright; it rotates around the bottom of the sleeve. */
-function WaveArm() {
-  return (
-    <svg viewBox="0 0 40 84" className="h-[84px] w-[40px]" aria-hidden>
-      <rect x="9" y="42" width="22" height="42" rx="9" fill={SLEEVE} stroke={SLEEVE_SHADE} strokeWidth="1" />
-      <rect x="9" y="42" width="22" height="7" rx="3.5" fill={SLEEVE_SHADE} opacity="0.6" />
-      <ellipse cx="8.5" cy="30" rx="4.2" ry="7.5" transform="rotate(-32 8.5 30)" fill={SKIN} stroke={SKIN_LINE} strokeWidth="0.8" />
-      {[
-        { x: 10, y: 8, h: 22 },
-        { x: 16, y: 4, h: 26 },
-        { x: 22, y: 5, h: 25 },
-        { x: 28, y: 10, h: 20 },
-      ].map((f) => (
-        <rect key={f.x} x={f.x - 0.5} y={f.y} width="6" height={f.h} rx="3" fill={SKIN} stroke={SKIN_LINE} strokeWidth="0.8" />
-      ))}
-      <rect x="9" y="20" width="25" height="24" rx="10" fill={SKIN} stroke={SKIN_LINE} strokeWidth="0.8" />
-      <path d="M13 31c4 3 10 3 15 0" fill="none" stroke={SKIN_SHADE} strokeWidth="1.2" strokeLinecap="round" />
-    </svg>
-  )
-}
+type Phase = 'hidden' | 'peek' | 'hello'
 
 export function Majed({ className }: { className?: string }) {
+  const { t } = useI18n()
   const reduce = useReducedMotion()
   const [phase, setPhase] = useState<Phase>(reduce ? 'peek' : 'hidden')
   const timers = useRef<number[]>([])
-
   const later = (ms: number, fn: () => void) => { timers.current.push(window.setTimeout(fn, ms)) }
 
-  const wave = () => {
-    if (reduce || phase === 'wave' || phase === 'hidden') return
-    setPhase('wave')
-    later(2100, () => setPhase('peek'))
+  const hello = () => {
+    if (reduce) return
+    setPhase((p) => {
+      if (p !== 'peek') return p
+      later(2600, () => setPhase((q) => (q === 'hello' ? 'peek' : q)))
+      return 'hello'
+    })
   }
 
   useEffect(() => {
     if (reduce) return
-    later(900, () => setPhase('peek'))
-    later(1900, () => setPhase('wave'))
-    later(4000, () => setPhase('peek'))
-    const again = window.setInterval(() => {
-      setPhase((p) => (p === 'peek' ? 'wave' : p))
-      later(2100, () => setPhase((p) => (p === 'wave' ? 'peek' : p)))
-    }, 9000)
+    later(700, () => setPhase('peek'))
+    later(1500, () => setPhase('hello'))
+    later(4300, () => setPhase('peek'))
+    const again = window.setInterval(hello, 10000)
     return () => { timers.current.forEach(clearTimeout); timers.current = []; clearInterval(again) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reduce])
 
   const up = phase !== 'hidden'
-  const waving = phase === 'wave'
-  const spring = { type: 'spring' as const, stiffness: 240, damping: 17, mass: 0.9 }
+  const greeting = phase === 'hello'
 
   return (
-    <div className={`pointer-events-none absolute bottom-full z-20 h-[92px] w-[176px] ${className ?? ''}`}>
-      {/* Everything that rises from behind the card lives in this clip, whose bottom is the card's top edge */}
+    <div className={`pointer-events-none absolute bottom-full z-20 h-[96px] w-[220px] ${className ?? ''}`}>
+      {/* The clip's bottom is the card's top edge, so he rises from behind the card */}
       <div className="absolute inset-0 overflow-hidden">
-        {/* Waving arm, behind his shoulder */}
-        <motion.div
-          className="absolute end-[26px] bottom-0 origin-bottom"
-          initial={false}
-          animate={waving ? { y: 6, rotate: [0, -22, 16, -22, 16, -10, 0] } : { y: 96, rotate: 0 }}
-          transition={waving ? { y: spring, rotate: { duration: 1.8, ease: 'easeInOut', delay: 0.15 } } : { duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-        >
-          <div className="ltr:scale-x-[-1]"><WaveArm /></div>
-        </motion.div>
         <motion.button
           type="button"
-          aria-label="Majed"
+          aria-label={t('majedHello')}
           tabIndex={-1}
-          onClick={wave}
-          onHoverStart={wave}
-          className="pointer-events-auto absolute start-[28px] top-0 w-[112px] cursor-pointer"
+          onClick={hello}
+          onHoverStart={hello}
+          className="pointer-events-auto absolute end-0 top-0 w-[112px] origin-bottom cursor-pointer"
           initial={false}
-          animate={{
-            y: up ? (waving ? [9, 5, 9] : 9) : 124,
-            rotate: waving ? [0, -3, 2, -3, 0] : 0,
-          }}
-          transition={up ? { y: waving ? { duration: 1, repeat: 1 } : spring, rotate: { duration: 2, ease: 'easeInOut' } } : { duration: 0.3 }}
+          animate={{ y: up ? (greeting ? [10, 2, 10, 4, 10] : 10) : 124, rotate: greeting ? [0, -6, 5, -4, 0] : 0 }}
+          transition={up
+            ? { y: greeting ? { duration: 1.4, ease: 'easeInOut' } : { type: 'spring', stiffness: 220, damping: 18 }, rotate: { duration: 1.4, ease: 'easeInOut' } }
+            : { duration: 0.3 }}
         >
-          <img src="/art/majed.webp" alt="" width={112} height={118} className="block h-auto w-full select-none drop-shadow-[0_6px_10px_rgb(0_0_0/0.35)]" draggable={false} />
+          <img src="/art/majed.webp" alt="" width={112} height={118} className="block h-auto w-full select-none" draggable={false} />
         </motion.button>
-
       </div>
 
-      {/* Hands holding the edge, in front of the card */}
-      <motion.div className="absolute start-[22px] top-full -translate-y-[11px]" initial={false}
-        animate={{ opacity: up ? 1 : 0, y: up ? 0 : 8 }} transition={{ duration: 0.25, delay: up ? 0.18 : 0 }}>
-        <GripHand />
-      </motion.div>
-      <motion.div className="absolute start-[116px] top-full -translate-y-[11px]" initial={false}
-        animate={{ opacity: up && !waving ? 1 : 0, y: up && !waving ? 0 : 8 }} transition={{ duration: 0.2, delay: up && !waving ? 0.2 : 0 }}>
-        <GripHand flip />
-      </motion.div>
+      {/* Speech bubble next to his head */}
+      <AnimatePresence>
+        {greeting && (
+          <motion.div
+            className="absolute end-[104px] top-1 rounded-[14px] border border-line bg-surface px-3 py-2 text-[13px] font-medium leading-5 text-ink shadow-[0_8px_24px_rgb(0_0_0/0.18)]"
+            initial={{ opacity: 0, scale: 0.85, y: 6 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: 4 }}
+            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <span className="whitespace-nowrap">{t('majedHello')}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

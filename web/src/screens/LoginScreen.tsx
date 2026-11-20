@@ -15,7 +15,7 @@ const ease = [0.22, 1, 0.36, 1] as const
 /** A drawing dimension line: the one engineering detail on the page. */
 function DimensionLine({ label }: { label: string }) {
   return (
-    <div className="mt-6 flex items-center gap-3 text-white/60" aria-hidden>
+    <div className="mt-6 flex items-center gap-3 text-muted" aria-hidden>
       <span className="h-3 w-px bg-current" />
       <span className="h-px flex-1 bg-current" />
       <span className="text-[12px]">{label}</span>
@@ -51,17 +51,17 @@ export function LoginScreen() {
     }
   }
 
-  const chip = 'grid h-9 min-w-9 place-items-center rounded-[10px] border border-white/15 bg-black/20 px-2.5 text-[13px] font-medium text-white backdrop-blur-md transition-colors hover:bg-black/35'
+  const chip = 'grid h-9 min-w-9 place-items-center rounded-[10px] border border-line bg-surface/70 px-2.5 text-[13px] font-medium text-ink backdrop-blur-md transition-colors hover:bg-surface'
 
   return (
-    <div className="relative min-h-dvh overflow-hidden bg-brand-900 text-white">
-      {/* The scene: engineers on site at dusk. It carries the color; everything else stays quiet. */}
-      <img src="/art/cover-site.webp" alt="" className="absolute inset-0 h-full w-full object-cover object-[72%_50%] md:object-center" />
-      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgb(6_20_36/0.82)_0%,rgb(6_20_36/0.3)_40%,rgb(6_20_36/0.6)_64%,rgb(6_20_36/0.92)_100%)] md:bg-[linear-gradient(90deg,rgb(6_20_36/0.88)_0%,rgb(6_20_36/0.5)_50%,rgb(6_20_36/0.3)_100%)] md:ltr:bg-[linear-gradient(270deg,rgb(6_20_36/0.88)_0%,rgb(6_20_36/0.5)_50%,rgb(6_20_36/0.3)_100%)]" />
+    <div className="relative min-h-dvh overflow-hidden bg-bg text-ink">
+      {/* A bright desk of drawings, helmet and coffee. A wash in the page color keeps text readable in both themes. */}
+      <img src="/art/empty-courses.webp" alt="" className="absolute inset-0 h-full w-full object-cover object-[22%_50%] md:object-center" />
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgb(var(--bg)/0.92)_0%,rgb(var(--bg)/0.55)_45%,rgb(var(--bg)/0.25)_100%)] md:bg-[linear-gradient(90deg,rgb(var(--bg)/0.94)_0%,rgb(var(--bg)/0.6)_50%,rgb(var(--bg)/0.15)_100%)] md:ltr:bg-[linear-gradient(270deg,rgb(var(--bg)/0.94)_0%,rgb(var(--bg)/0.6)_50%,rgb(var(--bg)/0.15)_100%)]" />
 
       <div className="relative mx-auto flex min-h-dvh max-w-[1280px] flex-col px-5 pb-[calc(20px+var(--safe-bottom))] pt-[calc(16px+var(--safe-top))] md:px-12 md:py-10">
         <header className="flex items-center justify-between">
-          <Logo variant="white" className="h-9 w-auto md:h-10" />
+          <Logo className="h-9 w-auto md:h-10" />
           <div className="flex items-center gap-2">
             <button className={chip} onClick={() => setTheme(resolved === 'dark' ? 'light' : 'dark')} aria-label={t('appearance')}>
               {resolved === 'dark' ? <Sun className="h-4 w-4" strokeWidth={1.75} /> : <Moon className="h-4 w-4" strokeWidth={1.75} />}
@@ -74,16 +74,16 @@ export function LoginScreen() {
           {/* Headline on the calm part of the photo */}
           <motion.section className="pb-4 pt-8 md:order-2 md:pb-0 md:pt-0"
             initial={reduce ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, delay: 0.05, ease }}>
-            <p className="text-[13px] font-medium text-white/70">{t('loginKicker')}</p>
+            <p className="text-[13px] font-medium text-accent">{t('loginKicker')}</p>
             <h1 className="mt-3 max-w-[18ch] font-display text-[25px] font-medium leading-[1.45] md:text-[44px] md:leading-[1.3]">{t('loginHeadline')}</h1>
-            <p className="mt-3 max-w-[34rem] text-[15px] leading-7 text-white/75 md:mt-4 md:text-lg md:leading-8">{t('loginSub')}</p>
+            <p className="mt-3 max-w-[34rem] text-[15px] leading-7 text-muted md:mt-4 md:text-lg md:leading-8">{t('loginSub')}</p>
             <div className="max-w-[26rem]"><DimensionLine label={t('loginDisciplines')} /></div>
           </motion.section>
 
           {/* One glass card that holds the form */}
           <motion.div className="mt-auto pt-[84px] md:order-1 md:mt-0"
             initial={reduce ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, delay: 0.15, ease }}>
-            <div className="relative rounded-[20px] border border-white/15 bg-[rgb(var(--surface)/0.8)] p-5 text-ink shadow-[0_24px_60px_-20px_rgb(0_0_0/0.55)] backdrop-blur-2xl backdrop-saturate-150 md:p-8">
+            <div className="relative rounded-[20px] border border-line bg-[rgb(var(--surface)/0.82)] p-5 text-ink shadow-[0_24px_60px_-24px_rgb(var(--shadow)/0.35)] backdrop-blur-2xl backdrop-saturate-150 md:p-8">
               <Majed className="end-3 md:end-6" />
               <form onSubmit={submit}>
                 <h2 className="font-display text-[20px] font-medium">{t('signInTitle')}</h2>
