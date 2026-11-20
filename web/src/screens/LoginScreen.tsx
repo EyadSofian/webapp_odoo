@@ -7,6 +7,7 @@ import { useI18n } from '../lib/i18n'
 import { useTheme } from '../lib/theme'
 import { AnimatePresence, motion } from '../lib/motion'
 import { Logo } from '../components/ui'
+import { Majed } from '../components/Majed'
 
 const WEBSITE = 'https://engosoft.com'
 const ease = [0.22, 1, 0.36, 1] as const
@@ -71,18 +72,19 @@ export function LoginScreen() {
 
         <div className="flex flex-1 flex-col md:grid md:grid-cols-[420px_minmax(0,1fr)] md:items-center md:gap-16">
           {/* Headline on the calm part of the photo */}
-          <motion.section className="pb-8 pt-10 md:order-2 md:pb-0 md:pt-0"
+          <motion.section className="pb-4 pt-8 md:order-2 md:pb-0 md:pt-0"
             initial={reduce ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, delay: 0.05, ease }}>
             <p className="text-[13px] font-medium text-white/70">{t('loginKicker')}</p>
-            <h1 className="mt-3 max-w-[18ch] font-display text-[28px] font-medium leading-[1.45] md:text-[44px] md:leading-[1.3]">{t('loginHeadline')}</h1>
+            <h1 className="mt-3 max-w-[18ch] font-display text-[25px] font-medium leading-[1.45] md:text-[44px] md:leading-[1.3]">{t('loginHeadline')}</h1>
             <p className="mt-3 max-w-[34rem] text-[15px] leading-7 text-white/75 md:mt-4 md:text-lg md:leading-8">{t('loginSub')}</p>
             <div className="max-w-[26rem]"><DimensionLine label={t('loginDisciplines')} /></div>
           </motion.section>
 
           {/* One glass card that holds the form */}
-          <motion.div className="mt-auto md:order-1 md:mt-0"
+          <motion.div className="mt-auto pt-[84px] md:order-1 md:mt-0"
             initial={reduce ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, delay: 0.15, ease }}>
-            <div className="rounded-[20px] border border-white/15 bg-[rgb(var(--surface)/0.8)] p-5 text-ink shadow-[0_24px_60px_-20px_rgb(0_0_0/0.55)] backdrop-blur-2xl backdrop-saturate-150 md:p-8">
+            <div className="relative rounded-[20px] border border-white/15 bg-[rgb(var(--surface)/0.8)] p-5 text-ink shadow-[0_24px_60px_-20px_rgb(0_0_0/0.55)] backdrop-blur-2xl backdrop-saturate-150 md:p-8">
+              <Majed className="end-3 md:end-6" />
               <form onSubmit={submit}>
                 <h2 className="font-display text-[20px] font-medium">{t('signInTitle')}</h2>
                 <p className="mt-1 text-[14px] leading-6 text-muted">{t('signInHint')}</p>
