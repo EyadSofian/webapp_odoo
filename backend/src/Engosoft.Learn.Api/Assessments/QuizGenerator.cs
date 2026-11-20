@@ -39,19 +39,19 @@ public sealed class QuizGenerator(
         var docs = await odoo.SearchReadAsync("event.track.document",
             D(("track_id", "=", trackId), ("source", "=", "zoom_caption")), ["id"], order: "id desc", limit: 1, ct: ct);
         if (docs.Count == 0)
-            return Error.Blocked("no_transcript", "المحاضرة دي مالهاش نص (Transcript) من Zoom لسه. اكتب الأسئلة بنفسك أو استنى لما التسجيل يتعالج.");
+            return Error.Blocked("no_transcript", "لا يتوفر نص (Transcript) لهذه المحاضرة من Zoom بعد. اكتب الأسئلة بنفسك أو انتظر حتى تتم معالجة التسجيل.");
         var url = (await odoo.ReadAsync("event.track.document", [docs[0].Id()], ["bunny_signed_url"], ct)).FirstOrDefault().Str("bunny_signed_url");
-        if (string.IsNullOrEmpty(url)) return Error.Blocked("no_transcript", "ملف النص مش متاح دلوقتي.");
+        if (string.IsNullOrEmpty(url)) return Error.Blocked("no_transcript", "ملف النص غير متاح حاليًا.");
         var vtt = await httpFactory.CreateClient("files").GetStringAsync(url, ct);
         var text = AssessmentRules.VttToText(vtt);
         return text.Length < 400
-            ? Error.Blocked("short_transcript", "نص المحاضرة قصير جداً ومينفعش يتعمل منه اختبار.")
+            ? Error.Blocked("short_transcript", "نص المحاضرة قصير جدًا ولا يكفي لإعداد اختبار.")
             : text;
     }
 
     public async Task<Result<GeneratedQuiz>> GenerateAsync(string courseTitle, string sessionTitle, string transcript, int count, string difficulty, CancellationToken ct)
     {
-        if (!Configured) return Error.Blocked("ai_not_configured", "مفتاح الذكاء الاصطناعي مش متضبط على السيرفر.");
+        if (!Configured) return Error.Blocked("ai_not_configured", "مفتاح الذكاء الاصطناعي غير مضبوط على الخادم.");
         count = Math.Clamp(count, 3, 20);
 
         var schema = new JsonObject
@@ -125,7 +125,7 @@ public sealed class QuizGenerator(
         if (!res.IsSuccessStatusCode)
         {
             log.LogWarning("OpenAI quiz generation failed with {Status}: {Body}", (int)res.StatusCode, raw.Length > 500 ? raw[..500] : raw);
-            return Error.Upstream("خدمة الذكاء الاصطناعي مش متاحة دلوقتي. جرّب تاني بعد شوية.");
+            return Error.Upstream("خدمة الذكاء الاصطناعي غير متاحة حاليًا. أعد المحاولة بعد قليل.");
         }
 
         try
@@ -143,13 +143,13 @@ public sealed class QuizGenerator(
                 questions.Add(new GeneratedQuestion(q.GetProperty("text").GetString() ?? "", opts, correct, q.GetProperty("explanation").GetString() ?? ""));
             }
             return questions.Count == 0
-                ? Error.Upstream("الذكاء الاصطناعي مطلعش أسئلة صالحة. جرّب تاني.")
+                ? Error.Upstream("لم يُنتج الذكاء الاصطناعي أسئلة صالحة. أعد المحاولة.")
                 : new GeneratedQuiz(title, questions);
         }
         catch (Exception ex) when (ex is JsonException or KeyNotFoundException or InvalidOperationException)
         {
             log.LogWarning(ex, "OpenAI returned an unexpected quiz payload");
-            return Error.Upstream("الذكاء الاصطناعي رجّع رد مش مفهوم. جرّب تاني.");
+            return Error.Upstream("أعاد الذكاء الاصطناعي ردًا غير مفهوم. أعد المحاولة.");
         }
     }
 }

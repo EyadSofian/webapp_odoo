@@ -48,8 +48,8 @@ export function HomeScreen() {
             <h1 className="font-display text-[28px] font-bold leading-tight md:text-5xl">{isLoading ? <span className="inline-block h-9 w-48 rounded-lg bg-white/15" /> : firstName || t('hello')}</h1>
             <p className="mt-3 hidden max-w-md text-white/75 md:block">
               {data?.nextSession
-                ? (lang === 'ar' ? `محاضرتك الجاية ${relativeDay(data.nextSession.start!, lang)}. الدخول بيفتح قبلها بربع ساعة.` : `Your next session is ${relativeDay(data.nextSession.start!, lang)}.`)
-                : (lang === 'ar' ? 'كمّل من حيث وقفت في كورساتك.' : 'Pick up where you left off.')}
+                ? (lang === 'ar' ? `محاضرتك القادمة ${relativeDay(data.nextSession.start!, lang)}. يُتاح الدخول قبل موعدها بربع ساعة.` : `Your next session is ${relativeDay(data.nextSession.start!, lang)}.`)
+                : (lang === 'ar' ? 'تابع دوراتك من حيث توقفت.' : 'Pick up where you left off.')}
             </p>
           </motion.div>
           <div className="hidden md:block">
@@ -144,8 +144,8 @@ export function HomeScreen() {
             )}
 
             {data && data.liveCourses.length === 0 && data.continueLearning.length === 0 && (
-              <EmptyState image="/art/empty-courses.webp" icon={<BookOpen className="h-7 w-7" />} title={lang === 'ar' ? 'مفيش كورسات على حسابك لسه' : 'No courses on your account yet'}
-                body={lang === 'ar' ? 'أول ما تشترك في كورس من موقع إنجوسوفت هيظهر هنا.' : 'Courses you join on engosoft.com show up here.'}
+              <EmptyState image="/art/empty-courses.webp" icon={<BookOpen className="h-7 w-7" />} title={lang === 'ar' ? 'لا توجد دورات في حسابك بعد' : 'No courses on your account yet'}
+                body={lang === 'ar' ? 'ستظهر هنا أي دورة تشترك فيها من موقع إنجوسوفت.' : 'Courses you join on engosoft.com show up here.'}
                 action={<a className="btn-primary" href={data.websiteUrl} target="_blank" rel="noreferrer">{t('browseWebsite')}</a>} />
             )}
           </div>

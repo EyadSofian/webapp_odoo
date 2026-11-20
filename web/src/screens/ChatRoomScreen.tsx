@@ -219,16 +219,16 @@ export function ChatRoomScreen() {
         {loaded && !hasMore && messages.length > 0 && (
           <p className="mx-auto mb-4 w-fit rounded-full bg-surface px-3 py-1 text-center text-[11px] text-muted shadow-card">
             {room.data?.kind === 'question'
-              ? (lang === 'ar' ? 'المحادثة دي بينك وبين فريق الكورس بس.' : 'Only you and the course team see this conversation.')
-              : (lang === 'ar' ? 'بداية جروب الكورس. الرسايل بتظهر لأعضاء الكورس بس.' : 'Start of the course group. Only course members see these messages.')}
+              ? (lang === 'ar' ? 'هذه المحادثة بينك وبين فريق الدورة فقط.' : 'Only you and the course team see this conversation.')
+              : (lang === 'ar' ? 'بداية مجموعة الدورة. تظهر الرسائل لأعضاء الدورة فقط.' : 'Start of the course group. Only course members see these messages.')}
           </p>
         )}
         {loaded && messages.length === 0 && pending.length === 0 && !joinError && (
           <div className="mx-auto mt-10 max-w-xs rounded-2xl bg-surface p-5 text-center shadow-card">
             <ShieldCheck className="mx-auto mb-2 h-8 w-8 text-accent" />
             <p className="text-sm">{room.data?.kind === 'question'
-              ? (lang === 'ar' ? 'اكتب سؤالك هنا. هيوصل للمحاضر وفريق الكورس بس.' : 'Write your question. Only the instructor and course team see it.')
-              : (lang === 'ar' ? 'جروب الكورس. اسأل وشارك زمايلك، والمحاضر هيرد هنا.' : 'Your course group. Ask questions; your instructor answers here.')}</p>
+              ? (lang === 'ar' ? 'اكتب سؤالك هنا، وسيصل إلى المحاضر وفريق الدورة فقط.' : 'Write your question. Only the instructor and course team see it.')
+              : (lang === 'ar' ? 'مجموعة الدورة. اسأل وشارك زملاءك، وسيجيب المحاضر هنا.' : 'Your course group. Ask questions; your instructor answers here.')}</p>
           </div>
         )}
 
@@ -275,7 +275,7 @@ export function ChatRoomScreen() {
         : <div className="flex items-center justify-center gap-2 border-t border-line bg-surface px-4 py-4 pb-[calc(16px+var(--safe-bottom))] text-center text-sm text-muted">
             {room.data.status !== 'open' ? <><Lock className="h-4 w-4" />{t('readOnly')}</>
               : room.data.announcementOnly ? <><Megaphone className="h-4 w-4" />{t('announcementOnly')}</>
-              : <><Lock className="h-4 w-4" />{lang === 'ar' ? 'الكتابة متوقفة مؤقتاً' : 'Writing is paused for you'}</>}
+              : <><Lock className="h-4 w-4" />{lang === 'ar' ? 'الكتابة متوقفة مؤقتًا' : 'Writing is paused for you'}</>}
           </div>)}
 
       {/* message actions */}
@@ -593,7 +593,7 @@ function RoomInfo({ open, onClose, room, staff, onChanged }: { open: boolean; on
               </li>
             ))}
           </ul>
-          {!staff && <p className="mt-2 text-xs text-muted">{lang === 'ar' ? 'الرسايل الخاصة بين المتدربين مقفولة. للأسئلة الخاصة استخدم "اسأل المحاضر".' : 'Private messages between learners are off. Use "Ask the instructor" for private questions.'}</p>}
+          {!staff && <p className="mt-2 text-xs text-muted">{lang === 'ar' ? 'الرسائل الخاصة بين المتدربين غير متاحة. للأسئلة الخاصة استخدم «اطرح سؤالًا خاصًا على المحاضر».' : 'Private messages between learners are off. Use "Ask the instructor" for private questions.'}</p>}
         </section>
       </div>
     </Sheet>

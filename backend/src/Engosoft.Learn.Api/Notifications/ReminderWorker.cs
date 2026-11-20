@@ -81,9 +81,9 @@ public sealed class ReminderWorker(IServiceScopeFactory scopes, TimeProvider clo
 
             var (title, body, urgent) = d.Kind switch
             {
-                "live" => ($"المحاضرة بدأت · {d.EventName}", $"{d.TrackName}. ادخل دلوقتي من التطبيق.", true),
-                "hour" => ($"المحاضرة بعد أقل من ساعة · {d.EventName}", $"{d.TrackName}. جهّز نفسك.", false),
-                _ => ($"عندك محاضرة النهارده أو بكرة · {d.EventName}", $"{d.TrackName}. افتح التطبيق تعرف الميعاد.", false),
+                "live" => ($"بدأت المحاضرة · {d.EventName}", $"{d.TrackName}. ادخل الآن من التطبيق.", true),
+                "hour" => ($"المحاضرة بعد أقل من ساعة · {d.EventName}", $"{d.TrackName}. استعد للمحاضرة.", false),
+                _ => ($"لديك محاضرة اليوم أو غدًا · {d.EventName}", $"{d.TrackName}. افتح التطبيق لمعرفة الموعد.", false),
             };
             await notifications.NotifyAsync(people, $"session_{d.Kind}", title, body, $"/live/{d.EventId}?session={d.TrackId}",
                 urgent: urgent, tag: $"session-{d.TrackId}", ct: ct);

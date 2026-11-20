@@ -30,7 +30,7 @@ public static class ChatPolicy
 
     public static readonly string[] AllowedReactions = ["👍", "❤️", "😂", "😮", "🙏", "✅"];
 
-    private static readonly Error NotMember = Error.NotFound("room_not_found", "الجروب ده مش متاح لك.");
+    private static readonly Error NotMember = Error.NotFound("room_not_found", "هذه المجموعة غير متاحة لك.");
 
     public static Error? CanRead(RoomMember? member, ChatRoom room)
     {
@@ -43,21 +43,21 @@ public static class ChatPolicy
     {
         if (CanRead(member, room) is { } readError) return readError;
         if (room.Status != RoomStatus.Open)
-            return Error.Blocked("room_read_only", "الجروب ده اتقفل للكتابة بعد انتهاء الكورس. تقدر تقرا الرسايل القديمة.");
+            return Error.Blocked("room_read_only", "أُغلقت الكتابة في هذه المجموعة بعد انتهاء الدورة، ويمكنك قراءة الرسائل السابقة.");
         if (bodyLength == 0 && attachmentCount == 0)
-            return Error.Validation("empty_message", "اكتب رسالة أو ارفع ملف.");
+            return Error.Validation("empty_message", "اكتب رسالة أو ارفع ملفًا.");
         if (bodyLength > MaxBodyLength)
             return Error.Validation("message_too_long", $"الرسالة طويلة. الحد الأقصى {MaxBodyLength} حرف.");
         if (member!.IsStaff) return null;
 
         if (room.AnnouncementOnly)
-            return Error.Blocked("announcement_only", "الجروب ده للإعلانات بس دلوقتي. لو عندك سؤال، ابعته للمحاضر سؤال خاص.");
+            return Error.Blocked("announcement_only", "هذه المجموعة مخصصة للإعلانات حاليًا. إن كان لديك سؤال، فأرسله إلى المحاضر سؤالًا خاصًا.");
         if (member.MutedUntil is { } until && until > now)
-            return Error.Blocked("muted", $"مش هتقدر تكتب في الجروب لحد {until:HH:mm} بتوقيت جرينتش.");
+            return Error.Blocked("muted", $"لن تتمكن من الكتابة في المجموعة حتى الساعة {until:HH:mm} بتوقيت غرينتش.");
         if (room.SlowModeSeconds > 0 && lastOwnMessageAt is { } last && (now - last).TotalSeconds < room.SlowModeSeconds)
         {
             var wait = (int)Math.Ceiling(room.SlowModeSeconds - (now - last).TotalSeconds);
-            return Error.Blocked("slow_mode", $"الجروب في الوضع البطيء. استنى {wait} ثانية.");
+            return Error.Blocked("slow_mode", $"المجموعة في الوضع البطيء. انتظر {wait} ثانية.");
         }
         return null;
     }
@@ -65,27 +65,27 @@ public static class ChatPolicy
     public static Error? CanUpload(RoomMember? member, ChatRoom room, bool studentsCanUpload)
     {
         if (CanRead(member, room) is { } readError) return readError;
-        if (room.Status != RoomStatus.Open) return Error.Blocked("room_read_only", "الجروب ده اتقفل للكتابة.");
-        if (!member!.IsStaff && !studentsCanUpload) return Error.Forbidden("upload_disabled", "رفع الملفات متاح لفريق الكورس بس.");
+        if (room.Status != RoomStatus.Open) return Error.Blocked("room_read_only", "أُغلقت الكتابة في هذه المجموعة.");
+        if (!member!.IsStaff && !studentsCanUpload) return Error.Forbidden("upload_disabled", "رفع الملفات متاح لفريق الدورة فقط.");
         return null;
     }
 
     public static Error? CanModerate(RoomMember? member) =>
-        member is { IsActive: true, IsStaff: true } ? null : Error.Forbidden("staff_only", "الإجراء ده للمحاضر وفريق الكورس بس.");
+        member is { IsActive: true, IsStaff: true } ? null : Error.Forbidden("staff_only", "هذا الإجراء متاح للمحاضر وفريق الدورة فقط.");
 
     public static Error? CanDelete(RoomMember? member, ChatMessage message)
     {
         if (member is null || !member.IsActive) return NotMember;
-        if (message.DeletedAt is not null) return Error.Conflict("already_deleted", "الرسالة دي اتمسحت قبل كده.");
+        if (message.DeletedAt is not null) return Error.Conflict("already_deleted", "حُذفت هذه الرسالة من قبل.");
         return member.IsStaff || message.SenderPartnerId == member.PartnerId
             ? null
-            : Error.Forbidden("not_your_message", "تقدر تمسح رسايلك انت بس.");
+            : Error.Forbidden("not_your_message", "يمكنك حذف رسائلك فقط.");
     }
 
     public static Error? CanReport(RoomMember? member, ChatMessage message)
     {
         if (member is null || !member.IsActive) return NotMember;
-        return message.SenderPartnerId == member.PartnerId ? Error.Validation("own_message", "مينفعش تبلّغ عن رسالتك.") : null;
+        return message.SenderPartnerId == member.PartnerId ? Error.Validation("own_message", "لا يمكنك الإبلاغ عن رسالتك.") : null;
     }
 
     /// <summary>Who belongs in a course group: an active seat that has not expired, or the course team.</summary>

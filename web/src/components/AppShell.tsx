@@ -106,8 +106,8 @@ function SideNav({ badges }: { badges?: Badges }) {
       <div className="mx-4 mt-8 overflow-hidden rounded-3xl bg-brand-900 text-white">
         <img src="/art/empty-courses.webp" alt="" className="h-24 w-full object-cover opacity-80" />
         <div className="p-4">
-          <p className="font-display text-sm font-bold">{lang === 'ar' ? 'عايز تكمّل مسارك؟' : 'Grow your track'}</p>
-          <p className="mt-1 text-xs text-white/70">{lang === 'ar' ? 'دبلومات وكورسات جديدة على موقع إنجوسوفت.' : 'New diplomas and courses on engosoft.com.'}</p>
+          <p className="font-display text-sm font-bold">{lang === 'ar' ? 'هل تريد مواصلة مسارك؟' : 'Grow your track'}</p>
+          <p className="mt-1 text-xs text-white/70">{lang === 'ar' ? 'دبلومات ودورات جديدة على موقع إنجوسوفت.' : 'New diplomas and courses on engosoft.com.'}</p>
           <a href="https://engosoft.com" target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-brand-200 hover:text-white">
             engosoft.com <ExternalLink className="h-3.5 w-3.5" />
           </a>

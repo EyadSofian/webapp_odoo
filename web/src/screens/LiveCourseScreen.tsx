@@ -79,7 +79,7 @@ export function LiveCourseScreen() {
                     ))}
                     {past.length > 0 && (
                       <button className="w-full py-3 text-sm font-bold text-accent" onClick={() => setShowPast((v) => !v)}>
-                        {showPast ? '▲' : '▼'} {lang === 'ar' ? `المحاضرات اللي فاتت (${past.length})` : `Past sessions (${past.length})`}
+                        {showPast ? '▲' : '▼'} {lang === 'ar' ? `المحاضرات السابقة (${past.length})` : `Past sessions (${past.length})`}
                       </button>
                     )}
                     {showPast && past.map((s) => (
@@ -133,7 +133,7 @@ export function LiveCourseScreen() {
                   <CourseCover channelId={c.courseChannelId} title={c.title} className="h-12 w-12" rounded="rounded-xl" />
                   <div className="flex-1">
                     <p className="font-bold">{t('recordedCourses')}</p>
-                    <p className="text-xs text-muted">{lang === 'ar' ? 'المحتوى المسجّل المرتبط بالكورس ده' : 'Recorded material for this course'}</p>
+                    <p className="text-xs text-muted">{lang === 'ar' ? 'المحتوى المسجّل المرتبط بهذه الدورة' : 'Recorded material for this course'}</p>
                   </div>
                 </Link>
               )}
@@ -157,7 +157,7 @@ function AssessmentsSection({ eventId, staff, ended }: { eventId: number; staff:
   const create = useMutation({
     mutationFn: (kind: 'quiz' | 'task') => api<AssessmentDetail>(`/api/live-courses/${eventId}/assessments`, {
       method: 'POST',
-      json: { kind, title: kind === 'quiz' ? (lang === 'ar' ? 'اختبار جديد' : 'New quiz') : (lang === 'ar' ? 'تاسك جديد' : 'New task'), maxAttempts: 2, passPercent: 60, revealAnswers: true, questions: [] },
+      json: { kind, title: kind === 'quiz' ? (lang === 'ar' ? 'اختبار جديد' : 'New quiz') : (lang === 'ar' ? 'مهمة جديدة' : 'New task'), maxAttempts: 2, passPercent: 60, revealAnswers: true, questions: [] },
     }),
     onSuccess: (a) => navigate(`/assessments/${a.card.id}`),
     onError: (e) => toast({ kind: 'error', text: e instanceof ApiError ? e.message : String(e) }),

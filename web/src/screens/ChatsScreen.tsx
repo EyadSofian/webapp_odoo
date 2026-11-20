@@ -31,7 +31,7 @@ export function ChatsPlaceholder() {
       <div className="max-w-sm text-center">
         <img src="/art/empty-chat.webp" alt="" className="mb-6 aspect-[16/10] w-full rounded-3xl object-cover shadow-lift" />
         <h2 className="font-display text-xl font-bold">{t('chats')}</h2>
-        <p className="mt-2 text-sm text-muted">{lang === 'ar' ? 'اختار جروب من القايمة. الرسايل بتظهر لأعضاء الكورس بس، ومفيش رسايل خاصة بين المتدربين.' : 'Pick a group. Messages are visible to course members only; learners cannot message each other privately.'}</p>
+        <p className="mt-2 text-sm text-muted">{lang === 'ar' ? 'اختر مجموعة من القائمة. تظهر الرسائل لأعضاء الدورة فقط، ولا توجد رسائل خاصة بين المتدربين.' : 'Pick a group. Messages are visible to course members only; learners cannot message each other privately.'}</p>
       </div>
     </div>
   )
@@ -52,7 +52,7 @@ export function ChatsScreen({ activeId }: { activeId?: string }) {
       <div className="px-4 pt-3">
         <label className="relative block">
           <Search className="pointer-events-none absolute inset-y-0 start-3 my-auto h-5 w-5 text-muted" />
-          <input className="field h-11 ps-10" placeholder={lang === 'ar' ? 'دوّر على جروب' : 'Search groups'} value={q} onChange={(e) => setQ(e.target.value)} />
+          <input className="field h-11 ps-10" placeholder={lang === 'ar' ? 'ابحث عن مجموعة' : 'Search groups'} value={q} onChange={(e) => setQ(e.target.value)} />
         </label>
       </div>
       {error ? <ErrorState error={error} onRetry={() => refetch()} /> : null}

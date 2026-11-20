@@ -12,9 +12,20 @@ import type { MemberRole, SessionStatus } from '../lib/types'
 // ------------------------------------------------------------------ brand
 
 /** The original Engosoft logo files from engosoft.com, used as-is. */
+/**
+ * The Engosoft wordmark only (no tagline). `color` follows the theme: brand colors on light, white on dark.
+ * `white` is for photos and dark panels.
+ */
 export function Logo({ variant = 'color', className }: { variant?: 'color' | 'white' | 'mark'; className?: string }) {
-  const src = variant === 'white' ? '/brand/engosoft-logo-white.png' : variant === 'mark' ? '/brand/engosoft-mark.png' : '/brand/engosoft-logo.webp'
-  return <img src={src} alt="Engosoft" className={clsx('select-none', className)} draggable={false} />
+  const white = '/brand/engosoft-wordmark-white.png'
+  if (variant === 'white') return <img src={white} alt="Engosoft" className={clsx('select-none', className)} draggable={false} />
+  if (variant === 'mark') return <img src="/brand/engosoft-mark.png" alt="Engosoft" className={clsx('select-none', className)} draggable={false} />
+  return (
+    <>
+      <img src="/brand/engosoft-wordmark.png" alt="Engosoft" className={clsx('select-none dark:hidden', className)} draggable={false} />
+      <img src={white} alt="Engosoft" className={clsx('hidden select-none dark:block', className)} draggable={false} />
+    </>
+  )
 }
 
 // ------------------------------------------------------------------ authed media

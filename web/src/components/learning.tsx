@@ -31,7 +31,7 @@ export function useJoin() {
       else window.location.href = url
     } catch (e) {
       win?.close()
-      toast({ kind: 'error', text: e instanceof ApiError ? e.message : 'حصلت مشكلة. جرّب تاني.' })
+      toast({ kind: 'error', text: e instanceof ApiError ? e.message : 'حدثت مشكلة. أعد المحاولة.' })
     } finally {
       setBusy(null)
     }

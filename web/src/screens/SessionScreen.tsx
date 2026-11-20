@@ -63,7 +63,7 @@ export function SessionScreen() {
                 <Video className="mx-auto mb-2 h-10 w-10 opacity-80" />
                 {data.recordingOnWebsiteOnly ? (
                   <>
-                    <p className="font-bold">{lang === 'ar' ? 'التسجيل جاهز على موقع إنجوسوفت' : 'The recording is ready on the Engosoft website'}</p>
+                    <p className="font-bold">{lang === 'ar' ? 'التسجيل متاح على موقع إنجوسوفت' : 'The recording is ready on the Engosoft website'}</p>
                     <a className="btn mt-3 h-10 bg-white px-4 text-sm text-brand-700" href={data.websiteUrl} target="_blank" rel="noreferrer">{t('openOnWebsite')}</a>
                   </>
                 ) : (

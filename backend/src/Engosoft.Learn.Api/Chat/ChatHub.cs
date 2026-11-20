@@ -14,7 +14,7 @@ public sealed class ChatHub(ChatService chat, ConnectionRegistry registry) : Hub
     public static string RoomGroup(Guid roomId) => $"room:{roomId:N}";
     public static string UserGroup(int partnerId) => $"user:{partnerId}";
 
-    private CurrentUser Me => CurrentUser.From(Context.User) ?? throw new HubException("سجّل دخول تاني.");
+    private CurrentUser Me => CurrentUser.From(Context.User) ?? throw new HubException("سجّل الدخول مرة أخرى.");
 
     public override async Task OnConnectedAsync()
     {

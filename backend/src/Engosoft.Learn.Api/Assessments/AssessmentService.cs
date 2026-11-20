@@ -72,10 +72,10 @@ public sealed class AssessmentService(
         var q = db.Assessments.Include(a => a.Questions).ThenInclude(q => q.Options).AsQueryable();
         if (!tracking) q = q.AsNoTracking();
         var a = await q.SingleOrDefaultAsync(x => x.Id == id, ct);
-        if (a is null) return Error.NotFound("assessment_not_found", "الاختبار ده مش موجود.");
+        if (a is null) return Error.NotFound("assessment_not_found", "هذا الاختبار غير موجود.");
         var role = await RoleAsync(user, a.OdooEventId, ct);
         if (role is null || (role == "student" && a.Status == AssessmentStatus.Draft))
-            return Error.NotFound("assessment_not_found", "الاختبار ده مش موجود.");
+            return Error.NotFound("assessment_not_found", "هذا الاختبار غير موجود.");
         a.Questions = a.Questions.OrderBy(x => x.Order).ToList();
         foreach (var x in a.Questions) x.Options = x.Options.OrderBy(o => o.Order).ToList();
         return (a, role == "staff");
@@ -86,7 +86,7 @@ public sealed class AssessmentService(
     public async Task<Result<IReadOnlyList<AssessmentCard>>> ListAsync(CurrentUser user, int eventId, CancellationToken ct)
     {
         var role = await RoleAsync(user, eventId, ct);
-        if (role is null) return Error.NotFound("course_not_found", "الكورس ده مش ضمن كورساتك.");
+        if (role is null) return Error.NotFound("course_not_found", "هذه الدورة ليست ضمن دوراتك.");
         var staff = role == "staff";
         var items = await db.Assessments.AsNoTracking().Include(a => a.Questions)
             .Where(a => a.OdooEventId == eventId && (staff || a.Status != AssessmentStatus.Draft))
@@ -163,7 +163,7 @@ public sealed class AssessmentService(
         var loaded = await LoadAsync(user, id, ct);
         if (!loaded.IsSuccess) return loaded.Error!;
         var (a, staff) = loaded.Value;
-        if (staff) return Error.Validation("staff_attempt", "فريق الكورس بيشوف الإجابات، مش بيحل الاختبار.");
+        if (staff) return Error.Validation("staff_attempt", "يطّلع فريق الدورة على الإجابات ولا يجيب عن الاختبار.");
         var used = await db.QuizAttempts.CountAsync(t => t.AssessmentId == id && t.PartnerId == user.PartnerId, ct);
         if (AssessmentRules.CanAttempt(a, used, Now) is { } denied) return denied;
 
@@ -192,14 +192,14 @@ public sealed class AssessmentService(
         var loaded = await LoadAsync(user, id, ct);
         if (!loaded.IsSuccess) return loaded.Error!;
         var (a, staff) = loaded.Value;
-        if (staff) return Error.Validation("staff_submit", "التسليم للمتدربين.");
+        if (staff) return Error.Validation("staff_submit", "التسليم متاح للمتدربين فقط.");
         if (AssessmentRules.CanSubmitTask(a) is { } denied) return denied;
         text = text?.Trim();
-        if (string.IsNullOrEmpty(text) && files.Count == 0) return Error.Validation("empty_submission", "اكتب إجابتك أو ارفع ملف.");
-        if (text?.Length > 8000) return Error.Validation("too_long", "الإجابة طويلة. الحد 8000 حرف.");
+        if (string.IsNullOrEmpty(text) && files.Count == 0) return Error.Validation("empty_submission", "اكتب إجابتك أو ارفع ملفًا.");
+        if (text?.Length > 8000) return Error.Validation("too_long", "الإجابة طويلة. الحد الأقصى 8000 حرف.");
 
         var sub = await db.TaskSubmissions.Include(s => s.Files).SingleOrDefaultAsync(s => s.AssessmentId == id && s.PartnerId == user.PartnerId, ct);
-        if (sub?.Grade is not null) return Error.Blocked("already_graded", "التسليم ده اتصحح خلاص.");
+        if (sub?.Grade is not null) return Error.Blocked("already_graded", "صُحّح هذا التسليم بالفعل.");
         if (sub is null) db.TaskSubmissions.Add(sub = new TaskSubmission { AssessmentId = id, PartnerId = user.PartnerId, PartnerName = user.Name });
         sub.Text = text;
         sub.SubmittedAt = Now;
@@ -210,9 +210,9 @@ public sealed class AssessmentService(
         // Check every file before writing any, so a rejected batch leaves nothing on disk.
         foreach (var f in upload)
         {
-            if (f.Length == 0 || f.Length > max) return Error.Validation("file_size", $"حجم الملف لازم يكون أقل من {chatOptions.Value.MaxAttachmentMb} ميجا.");
+            if (f.Length == 0 || f.Length > max) return Error.Validation("file_size", $"يجب أن يكون حجم الملف أقل من {chatOptions.Value.MaxAttachmentMb} ميجابايت.");
             if (!ChatService.TryGetAllowedType(f.FileName, out _))
-                return Error.Validation("file_type", "نوع الملف ده مش مسموح. المسموح: صور، PDF، ملفات أوفيس، DWG، ZIP، وتسجيلات صوت.");
+                return Error.Validation("file_type", "نوع الملف غير مسموح. المسموح: الصور، وPDF، وملفات أوفيس، وDWG، وZIP، والتسجيلات الصوتية.");
         }
         foreach (var f in upload)
         {
@@ -247,7 +247,7 @@ public sealed class AssessmentService(
     {
         var loaded = await LoadAsync(user, id, ct);
         if (!loaded.IsSuccess) return loaded.Error!;
-        if (!loaded.Value.Staff) return Error.Forbidden("staff_only", "دي لفريق الكورس بس.");
+        if (!loaded.Value.Staff) return Error.Forbidden("staff_only", "هذا متاح لفريق الدورة فقط.");
         var list = await db.TaskSubmissions.AsNoTracking().Include(s => s.Files).Where(s => s.AssessmentId == id)
             .OrderBy(s => s.Grade != null).ThenBy(s => s.SubmittedAt).ToListAsync(ct);
         return list.Select(ToDto).ToList();
@@ -257,7 +257,7 @@ public sealed class AssessmentService(
     {
         var loaded = await LoadAsync(user, id, ct);
         if (!loaded.IsSuccess) return loaded.Error!;
-        if (!loaded.Value.Staff) return Error.Forbidden("staff_only", "دي لفريق الكورس بس.");
+        if (!loaded.Value.Staff) return Error.Forbidden("staff_only", "هذا متاح لفريق الدورة فقط.");
         var rows = await db.QuizAttempts.AsNoTracking().Where(t => t.AssessmentId == id).OrderByDescending(t => t.Percent).ToListAsync(ct);
         return rows.Select(t => new AttemptDto(t.Id, t.SubmittedAt, t.Score, t.MaxScore, t.Percent, t.Passed)).ToList();
     }
@@ -268,20 +268,20 @@ public sealed class AssessmentService(
         if (sub is null) return Error.NotFound();
         var a = await db.Assessments.AsNoTracking().SingleAsync(x => x.Id == sub.AssessmentId, ct);
         if (await RoleAsync(user, a.OdooEventId, ct) != "staff") return Error.NotFound();
-        if (req.Grade is < 0 or > 100) return Error.Validation("bad_grade", "الدرجة من 0 لـ 100.");
+        if (req.Grade is < 0 or > 100) return Error.Validation("bad_grade", "الدرجة من 0 إلى 100.");
         sub.Grade = Math.Round(req.Grade, 1);
         sub.Feedback = req.Feedback?.Trim() is { Length: > 0 } f ? (f.Length > 4000 ? f[..4000] : f) : null;
         sub.GradedBy = user.PartnerId;
         sub.GradedAt = Now;
         await db.SaveChangesAsync(ct);
-        await notifications.NotifyAsync([sub.PartnerId], "task_graded", $"التاسك اتصحح · {a.Title}", $"درجتك {sub.Grade}/100.",
+        await notifications.NotifyAsync([sub.PartnerId], "task_graded", $"صُحّحت المهمة · {a.Title}", $"درجتك {sub.Grade}/100.",
             $"/assessments/{a.Id}", tag: $"task-{a.Id}", ct: ct);
         return ToDto(sub);
     }
 
     public async Task<Result<AssessmentDetail>> CreateAsync(CurrentUser user, int eventId, UpsertAssessmentRequest req, CancellationToken ct)
     {
-        if (await RoleAsync(user, eventId, ct) != "staff") return Error.Forbidden("staff_only", "إنشاء الاختبارات لفريق الكورس بس.");
+        if (await RoleAsync(user, eventId, ct) != "staff") return Error.Forbidden("staff_only", "إنشاء الاختبارات متاح لفريق الدورة فقط.");
         var a = new Assessment { OdooEventId = eventId, CreatedByPartnerId = user.PartnerId, CreatedAt = Now, Status = AssessmentStatus.Draft };
         if (Apply(a, req) is { } invalid) return invalid;
         db.Assessments.Add(a);
@@ -294,9 +294,9 @@ public sealed class AssessmentService(
         var loaded = await LoadAsync(user, id, ct, tracking: true);
         if (!loaded.IsSuccess) return loaded.Error!;
         var (a, staff) = loaded.Value;
-        if (!staff) return Error.Forbidden("staff_only", "التعديل لفريق الكورس بس.");
+        if (!staff) return Error.Forbidden("staff_only", "التعديل متاح لفريق الدورة فقط.");
         if (req.Questions is not null && await db.QuizAttempts.AnyAsync(t => t.AssessmentId == id, ct))
-            return Error.Conflict("has_attempts", "متدربين حلّوا الاختبار ده، فمينفعش تغيّر الأسئلة. اعمل اختبار جديد.");
+            return Error.Conflict("has_attempts", "أجاب متدربون عن هذا الاختبار، لذا لا يمكن تغيير أسئلته. أنشئ اختبارًا جديدًا.");
         if (req.Questions is not null)
         {
             db.Questions.RemoveRange(a.Questions);
@@ -311,8 +311,8 @@ public sealed class AssessmentService(
 
     private static Error? Apply(Assessment a, UpsertAssessmentRequest req)
     {
-        if (!Enum.TryParse<AssessmentKind>(req.Kind, true, out var kind)) return Error.Validation("bad_kind", "النوع لازم يكون اختبار أو تاسك.");
-        if (string.IsNullOrWhiteSpace(req.Title) || req.Title.Length > 200) return Error.Validation("bad_title", "اكتب عنوان (لحد 200 حرف).");
+        if (!Enum.TryParse<AssessmentKind>(req.Kind, true, out var kind)) return Error.Validation("bad_kind", "يجب أن يكون النوع اختبارًا أو مهمة.");
+        if (string.IsNullOrWhiteSpace(req.Title) || req.Title.Length > 200) return Error.Validation("bad_title", "اكتب عنوانًا (حتى 200 حرف).");
         a.Kind = kind;
         a.Title = req.Title.Trim();
         a.Instructions = string.IsNullOrWhiteSpace(req.Instructions) ? null : req.Instructions.Trim();
@@ -324,7 +324,7 @@ public sealed class AssessmentService(
         a.RevealAnswers = req.RevealAnswers;
         if (req.Questions is { } qs)
         {
-            if (qs.Count > AssessmentRules.MaxQuestions) return Error.Validation("too_many", $"الحد {AssessmentRules.MaxQuestions} سؤال.");
+            if (qs.Count > AssessmentRules.MaxQuestions) return Error.Validation("too_many", $"الحد الأقصى {AssessmentRules.MaxQuestions} سؤالًا.");
             a.Questions = qs.Select((q, i) => new AssessmentQuestion
             {
                 AssessmentId = a.Id, Order = i, Text = q.Text.Trim(), Explanation = q.Explanation?.Trim(), Points = Math.Clamp(q.Points, 1, 10),
@@ -337,8 +337,8 @@ public sealed class AssessmentService(
     public async Task<Result<AssessmentDetail>> GenerateAsync(CurrentUser user, int trackId, GenerateRequest req, CancellationToken ct)
     {
         var track = (await odoo.ReadAsync("event.track", [trackId], ["name", "event_id"], ct)).FirstOrDefault();
-        if (track.M2O("event_id") is not { } ev) return Error.NotFound("session_not_found", "المحاضرة دي مش موجودة.");
-        if (await RoleAsync(user, ev.Id, ct) != "staff") return Error.Forbidden("staff_only", "توليد الاختبارات لفريق الكورس بس.");
+        if (track.M2O("event_id") is not { } ev) return Error.NotFound("session_not_found", "هذه المحاضرة غير موجودة.");
+        if (await RoleAsync(user, ev.Id, ct) != "staff") return Error.Forbidden("staff_only", "توليد الاختبارات متاح لفريق الدورة فقط.");
 
         var transcript = await generator.TranscriptAsync(trackId, ct);
         if (!transcript.IsSuccess) return transcript.Error!;
@@ -351,7 +351,7 @@ public sealed class AssessmentService(
         {
             Kind = AssessmentKind.Quiz, OdooEventId = ev.Id, OdooTrackId = trackId, Title = quiz.Value!.Title, Status = AssessmentStatus.Draft,
             AiGenerated = true, CreatedByPartnerId = user.PartnerId, CreatedAt = Now, MaxAttempts = 2, PassPercent = 60, RevealAnswers = true,
-            Instructions = "اختبار قصير على المحاضرة. اختار إجابة واحدة لكل سؤال.",
+            Instructions = "اختبار قصير على المحاضرة. اختر إجابة واحدة لكل سؤال.",
         };
         a.Questions = quiz.Value.Questions.Select((q, i) => new AssessmentQuestion
         {
@@ -370,7 +370,7 @@ public sealed class AssessmentService(
         var loaded = await LoadAsync(user, id, ct, tracking: true);
         if (!loaded.IsSuccess) return loaded.Error!;
         var (a, staff) = loaded.Value;
-        if (!staff) return Error.Forbidden("staff_only", "النشر لفريق الكورس بس.");
+        if (!staff) return Error.Forbidden("staff_only", "النشر متاح لفريق الدورة فقط.");
         if (status == AssessmentStatus.Published && AssessmentRules.ValidateForPublish(a) is { } invalid) return invalid;
         var firstPublish = status == AssessmentStatus.Published && a.PublishedAt is null;
         a.Status = status;
@@ -380,9 +380,9 @@ public sealed class AssessmentService(
         if (firstPublish)
         {
             var people = await LearnersOnAppAsync(a.OdooEventId, ct);
-            var what = a.Kind == AssessmentKind.Quiz ? "اختبار جديد" : "تاسك جديد";
+            var what = a.Kind == AssessmentKind.Quiz ? "اختبار جديد" : "مهمة جديدة";
             await notifications.NotifyAsync(people, a.Kind == AssessmentKind.Quiz ? "quiz_published" : "task_published", $"{what} · {a.Title}",
-                a.DueAt is { } due ? $"آخر ميعاد {due:yyyy/MM/dd}." : "افتحه من التطبيق.", $"/assessments/{a.Id}", tag: $"assessment-{a.Id}", ct: ct);
+                a.DueAt is { } due ? $"آخر موعد {due:yyyy/MM/dd}." : "افتحه من التطبيق.", $"/assessments/{a.Id}", tag: $"assessment-{a.Id}", ct: ct);
         }
         return await GetAsync(user, id, ct);
     }
@@ -391,8 +391,8 @@ public sealed class AssessmentService(
     {
         var loaded = await LoadAsync(user, id, ct, tracking: true);
         if (!loaded.IsSuccess) return loaded.Error!;
-        if (!loaded.Value.Staff) return Error.Forbidden("staff_only", "المسح لفريق الكورس بس.");
-        if (loaded.Value.A.Status != AssessmentStatus.Draft) return Error.Conflict("published", "مينفعش تمسح حاجة اتنشرت. اقفلها بدل كده.");
+        if (!loaded.Value.Staff) return Error.Forbidden("staff_only", "الحذف متاح لفريق الدورة فقط.");
+        if (loaded.Value.A.Status != AssessmentStatus.Draft) return Error.Conflict("published", "لا يمكن حذف عنصر منشور. أغلقه بدلًا من ذلك.");
         db.Assessments.Remove(loaded.Value.A);
         await db.SaveChangesAsync(ct);
         return true;

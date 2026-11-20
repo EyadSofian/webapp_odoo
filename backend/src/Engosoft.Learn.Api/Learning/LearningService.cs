@@ -85,10 +85,10 @@ public sealed partial class LearningService(
     {
         var mine = await GetMyEventsAsync(user, ct);
         if (!mine.TryGetValue(eventId, out var access))
-            return Error.NotFound("course_not_found", "الكورس ده مش ضمن كورساتك.");
+            return Error.NotFound("course_not_found", "هذه الدورة ليست ضمن دوراتك.");
         if (needContent && access.Expired)
             return Error.Blocked("access_expired",
-                $"صلاحية الكورس ده خلصت يوم {access.AccessUntil:yyyy/MM/dd}. للتجديد تواصل مع فريق إنجوسوفت.");
+                $"انتهت صلاحية هذه الدورة في {access.AccessUntil:yyyy/MM/dd}. للتجديد تواصل مع فريق إنجوسوفت.");
         return access;
     }
 
@@ -115,9 +115,9 @@ public sealed partial class LearningService(
     {
         var mine = await GetMyEnrollmentsAsync(user, ct);
         if (!mine.TryGetValue(channelId, out var e))
-            return Error.NotFound("course_not_found", "الكورس ده مش ضمن كورساتك.");
+            return Error.NotFound("course_not_found", "هذه الدورة ليست ضمن دوراتك.");
         if (needContent && e.Expired)
-            return Error.Blocked("access_expired", $"صلاحية الكورس ده خلصت يوم {e.AccessUntil:yyyy/MM/dd}. للتجديد تواصل مع فريق إنجوسوفت.");
+            return Error.Blocked("access_expired", $"انتهت صلاحية هذه الدورة في {e.AccessUntil:yyyy/MM/dd}. للتجديد تواصل مع فريق إنجوسوفت.");
         return e;
     }
 
@@ -261,12 +261,12 @@ public sealed partial class LearningService(
     {
         var rows = await odoo.ReadAsync("event.track", [trackId], TrackFields, ct);
         if (rows.Count == 0 || rows[0].M2O("event_id") is not { } ev)
-            return Error.NotFound("session_not_found", "المحاضرة دي مش موجودة.");
+            return Error.NotFound("session_not_found", "هذه المحاضرة غير موجودة.");
         var access = await RequireEventAsync(user, ev.Id, needContent: true, ct);
         if (!access.IsSuccess) return access.Error!;
         var stage = rows[0].M2O("stage_id")?.Name;
         if (stage is not null && options.Value.HiddenSessionStages.Contains(stage, StringComparer.OrdinalIgnoreCase))
-            return Error.NotFound("session_not_found", "المحاضرة دي مش موجودة.");
+            return Error.NotFound("session_not_found", "هذه المحاضرة غير موجودة.");
         return (rows[0], access.Value!, CleanTitle(ev.Name));
     }
 
@@ -296,10 +296,10 @@ public sealed partial class LearningService(
         if (!found.IsSuccess) return found.Error!;
         var (track, _, eventTitle) = found.Value;
         var s = ToSession(track, eventTitle, 1, true, new Dictionary<int, int>());
-        if (s.Status == SessionStatus.Ended) return Error.Blocked("session_ended", "المحاضرة دي خلصت. التسجيل هيظهر أول ما يجهز.");
-        if (s.Status == SessionStatus.Cancelled) return Error.Blocked("session_cancelled", "المحاضرة دي اتلغت.");
+        if (s.Status == SessionStatus.Ended) return Error.Blocked("session_ended", "انتهت هذه المحاضرة، وسيظهر التسجيل فور جاهزيته.");
+        if (s.Status == SessionStatus.Cancelled) return Error.Blocked("session_cancelled", "أُلغيت هذه المحاضرة.");
         if (!s.CanJoin)
-            return Error.Blocked("not_open_yet", $"لينك الدخول بيفتح قبل المحاضرة بـ {options.Value.JoinOpensMinutesBefore} دقيقة.");
+            return Error.Blocked("not_open_yet", $"يُتاح رابط الدخول قبل المحاضرة بـ {options.Value.JoinOpensMinutesBefore} دقيقة.");
         return new JoinLink(track.Str("active_join_live_url")!);
     }
 
@@ -307,12 +307,12 @@ public sealed partial class LearningService(
     {
         var rows = await odoo.ReadAsync("event.track.document", [documentId], ["track_id", "source"], ct);
         if (rows.Count == 0 || rows[0].Str("source") != "manual" || rows[0].M2O("track_id") is not { } track)
-            return Error.NotFound("file_not_found", "الملف ده مش موجود.");
+            return Error.NotFound("file_not_found", "هذا الملف غير موجود.");
         var found = await RequireTrackAsync(user, track.Id, ct);
         if (!found.IsSuccess) return found.Error!;
         // bunny_signed_url is computed by Odoo at read time with a short expiry, so we read it only after the access check.
         var signed = (await odoo.ReadAsync("event.track.document", [documentId], ["bunny_signed_url"], ct)).FirstOrDefault().Str("bunny_signed_url");
-        return string.IsNullOrEmpty(signed) ? Error.NotFound("file_not_found", "الملف ده مش متاح دلوقتي.") : signed;
+        return string.IsNullOrEmpty(signed) ? Error.NotFound("file_not_found", "هذا الملف غير متاح حاليًا.") : signed;
     }
 
     // ------------------------------------------------------------------ recorded courses
@@ -405,7 +405,7 @@ public sealed partial class LearningService(
         var rows = await odoo.ReadAsync("slide.slide", [slideId],
             ["name", "channel_id", "slide_category", "is_category", "completion_time", "is_preview", "is_published", "website_url"], ct);
         if (rows.Count == 0 || rows[0].Bool("is_category") || !rows[0].Bool("is_published") || rows[0].M2O("channel_id") is not { } ch)
-            return Error.NotFound("lesson_not_found", "الدرس ده مش موجود.");
+            return Error.NotFound("lesson_not_found", "هذا الدرس غير موجود.");
         var s = rows[0];
         var access = await RequireChannelAsync(user, ch.Id, needContent: !s.Bool("is_preview"), ct);
         if (!access.IsSuccess) return access.Error!;
@@ -444,10 +444,10 @@ public sealed partial class LearningService(
     {
         var lesson = await GetLessonAsync(user, slideId, ct);
         if (!lesson.IsSuccess) return lesson.Error!;
-        if (!lesson.Value!.HasFile) return Error.NotFound("file_not_found", "مفيش ملف للدرس ده.");
+        if (!lesson.Value!.HasFile) return Error.NotFound("file_not_found", "لا يوجد ملف لهذا الدرس.");
         var field = lesson.Value.Type == "infographic" ? "image_1920" : "binary_content";
         var data = (await odoo.ReadAsync("slide.slide", [slideId], [field], ct)).FirstOrDefault().Str(field);
-        if (string.IsNullOrEmpty(data)) return Error.NotFound("file_not_found", "الملف ده مش متاح دلوقتي.");
+        if (string.IsNullOrEmpty(data)) return Error.NotFound("file_not_found", "هذا الملف غير متاح حاليًا.");
         var bytes = Convert.FromBase64String(data);
         var type = Media.Sniff(bytes);
         return (bytes, type, $"{Slug(lesson.Value.Title)}{Media.Extension(type)}");
@@ -458,7 +458,7 @@ public sealed partial class LearningService(
         var lesson = await GetLessonAsync(user, slideId, ct);
         if (!lesson.IsSuccess) return lesson.Error!;
         if (lesson.Value!.Type is "quiz" or "certification")
-            return Error.Blocked("quiz_on_website", "الاختبار ده بيتحل على موقع إنجوسوفت.");
+            return Error.Blocked("quiz_on_website", "يُجرى هذا الاختبار على موقع إنجوسوفت.");
         var access = await RequireChannelAsync(user, lesson.Value.ChannelId, needContent: true, ct);
         if (!access.IsSuccess) return access.Error!;
 
@@ -487,7 +487,7 @@ public sealed partial class LearningService(
     {
         var lesson = await GetLessonAsync(user, slideId, ct);
         if (!lesson.IsSuccess) return lesson.Error!;
-        if (lesson.Value!.Type != "quiz") return Error.Validation("not_quiz", "الدرس ده مش اختبار.");
+        if (lesson.Value!.Type != "quiz") return Error.Validation("not_quiz", "هذا الدرس ليس اختبارًا.");
         var access = await RequireChannelAsync(user, lesson.Value.ChannelId, needContent: true, ct);
         if (!access.IsSuccess) return access.Error!;
         var questions = await odoo.SearchReadAsync("slide.question", D(("slide_id", "=", slideId)), ["question", "answer_ids"], order: "sequence asc, id asc", ct: ct);
@@ -564,9 +564,9 @@ public sealed partial class LearningService(
     {
         var rows = await odoo.ReadAsync("lms.certificate", [id], ["partner_id", "state", "certificate_filename"], ct);
         if (rows.Count == 0 || rows[0].M2O("partner_id")?.Id != user.PartnerId || rows[0].Str("state") is not ("generated" or "sent"))
-            return Error.NotFound("certificate_not_found", "الشهادة دي مش موجودة.");
+            return Error.NotFound("certificate_not_found", "هذه الشهادة غير موجودة.");
         var data = (await odoo.ReadAsync("lms.certificate", [id], ["certificate_image"], ct)).FirstOrDefault().Str("certificate_image");
-        if (string.IsNullOrEmpty(data)) return Error.NotFound("certificate_not_ready", "الشهادة لسه بتتجهز.");
+        if (string.IsNullOrEmpty(data)) return Error.NotFound("certificate_not_ready", "الشهادة قيد الإعداد.");
         var bytes = Convert.FromBase64String(data);
         return (bytes, Media.Sniff(bytes), rows[0].Str("certificate_filename") ?? $"certificate-{id}.png");
     }

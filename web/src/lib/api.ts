@@ -103,7 +103,7 @@ export async function getAccessToken(): Promise<string | null> {
 }
 
 async function toError(res: Response): Promise<ApiError> {
-  let message = 'حصلت مشكلة. جرّب تاني.'
+  let message = 'حدثت مشكلة. أعد المحاولة.'
   let code: string | undefined
   try {
     const body = await res.json()
@@ -112,8 +112,8 @@ async function toError(res: Response): Promise<ApiError> {
   } catch {
     /* not JSON */
   }
-  if (res.status === 429) message = 'طلبات كتير ورا بعض. استنى ثواني وجرّب تاني.'
-  if (res.status === 503) message = message || 'منصة إنجوسوفت مش بترد دلوقتي.'
+  if (res.status === 429) message = 'طلبات كثيرة متتالية. انتظر قليلًا ثم أعد المحاولة.'
+  if (res.status === 503) message = message || 'منصة إنجوسوفت لا تستجيب حاليًا.'
   return new ApiError(message, res.status, code)
 }
 
@@ -134,7 +134,7 @@ export async function api<T>(path: string, init: RequestInit & { json?: unknown 
       if (token) res = await send(token)
     }
   } catch {
-    throw new ApiError('مفيش اتصال بالإنترنت أو السيرفر مش متاح.', 0, 'offline')
+    throw new ApiError('لا يوجد اتصال بالإنترنت، أو الخادم غير متاح.', 0, 'offline')
   }
 
   if (!res.ok) throw await toError(res)
@@ -155,7 +155,7 @@ export async function login(email: string, password: string) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
   }).catch(() => {
-    throw new ApiError('مفيش اتصال بالإنترنت أو السيرفر مش متاح.', 0, 'offline')
+    throw new ApiError('لا يوجد اتصال بالإنترنت، أو الخادم غير متاح.', 0, 'offline')
   })
   if (!res.ok) throw await toError(res)
   const data = (await res.json()) as TokenResponse

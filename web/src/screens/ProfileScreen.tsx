@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Award, BellRing, ChevronLeft, Globe, LogOut, Moon, Send, ShoppingBag, Smartphone } from 'lucide-react'
+import { Award, BellRing, ChevronLeft, Globe, LogOut, Moon, Palette, Send, ShoppingBag, Smartphone } from 'lucide-react'
 import { ApiError, api } from '../lib/api'
 import { useAuth } from '../lib/auth'
 import { useI18n } from '../lib/i18n'
 import { enablePush, disablePush, pushState, type PushState } from '../lib/push'
 import { useInstallPrompt } from '../lib/install'
+import { useTheme, type ThemeChoice } from '../lib/theme'
 import type { Preferences, Profile } from '../lib/types'
 import { Avatar, Skeleton, TopBar, useToast } from '../components/ui'
 
@@ -22,6 +23,7 @@ export function ProfileScreen() {
   const profile = useQuery({ queryKey: ['me'], queryFn: () => api<Profile>('/api/me') })
   const prefs = useQuery({ queryKey: ['prefs'], queryFn: () => api<Preferences>('/api/preferences') })
   const [push, setPush] = useState<PushState>(pushState)
+  const { theme, setTheme } = useTheme()
 
   const savePrefs = useMutation({
     mutationFn: (p: Preferences) => api('/api/preferences', { method: 'PUT', json: p }),
@@ -114,6 +116,18 @@ export function ProfileScreen() {
             <div className="flex rounded-lg bg-sunken p-0.5 text-sm font-bold">
               <button className={lang === 'ar' ? 'rounded-md bg-surface px-3 py-1 shadow-card' : 'px-3 py-1 text-muted'} onClick={() => setLang('ar')}>العربية</button>
               <button className={lang === 'en' ? 'rounded-md bg-surface px-3 py-1 shadow-card' : 'px-3 py-1 text-muted'} onClick={() => setLang('en')}>English</button>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 px-4 py-3">
+            <Palette className="h-5 w-5 text-muted" />
+            <span className="flex-1">{t('appearance')}</span>
+            <div className="flex rounded-lg bg-sunken p-0.5 text-sm font-bold" role="radiogroup" aria-label={t('appearance')}>
+              {(['light', 'dark', 'system'] as ThemeChoice[]).map((c) => (
+                <button key={c} role="radio" aria-checked={theme === c} onClick={() => setTheme(c)}
+                  className={theme === c ? 'rounded-md bg-surface px-3 py-1 shadow-card' : 'px-3 py-1 text-muted'}>
+                  {t(c === 'light' ? 'themeLight' : c === 'dark' ? 'themeDark' : 'themeSystem')}
+                </button>
+              ))}
             </div>
           </div>
           <a href={profile.data?.websiteUrl ?? 'https://engosoft.com'} target="_blank" rel="noreferrer" className="flex items-center gap-3 px-4 py-3">

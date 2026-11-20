@@ -68,7 +68,7 @@ public sealed class ChatService(
     private async Task<Result<RoomMember>> ReadableAsync(CurrentUser user, Guid roomId, CancellationToken ct)
     {
         var m = await MemberAsync(roomId, user.PartnerId, ct);
-        if (m?.Room is null) return Error.NotFound("room_not_found", "الجروب ده مش متاح لك.");
+        if (m?.Room is null) return Error.NotFound("room_not_found", "هذه المجموعة غير متاحة لك.");
         return ChatPolicy.CanRead(m, m.Room) is { } e ? e : m;
     }
 
@@ -143,9 +143,9 @@ public sealed class ChatService(
         var course = await db.Rooms.Include(r => r.Members)
             .SingleOrDefaultAsync(r => r.Kind == RoomKind.Course && r.OdooEventId == eventId, ct);
         var me = course?.Members.SingleOrDefault(x => x.PartnerId == user.PartnerId && x.RemovedAt == null);
-        if (course is null || me is null) return Error.NotFound("course_not_found", "الكورس ده مش ضمن كورساتك.");
-        if (me.IsStaff) return Error.Validation("staff_question", "الأسئلة الخاصة بيفتحها المتدربين.");
-        if (course.Status != RoomStatus.Open) return Error.Blocked("room_read_only", "الكورس خلص، والأسئلة الخاصة اتقفلت.");
+        if (course is null || me is null) return Error.NotFound("course_not_found", "هذه الدورة ليست ضمن دوراتك.");
+        if (me.IsStaff) return Error.Validation("staff_question", "يفتح المتدربون الأسئلة الخاصة.");
+        if (course.Status != RoomStatus.Open) return Error.Blocked("room_read_only", "انتهت الدورة، وأُغلقت الأسئلة الخاصة.");
 
         var existing = await db.Rooms.Where(r => r.Kind == RoomKind.Question && r.OdooEventId == eventId && r.OwnerPartnerId == user.PartnerId)
             .Select(r => r.Id).FirstOrDefaultAsync(ct);
@@ -161,7 +161,7 @@ public sealed class ChatService(
         room.Members.Add(new RoomMember { RoomId = room.Id, PartnerId = me.PartnerId, DisplayName = me.DisplayName, Role = MemberRole.Student, JoinedAt = now, Notify = NotifyLevel.All });
         foreach (var s in course.Members.Where(x => x.IsStaff && x.RemovedAt == null))
             room.Members.Add(new RoomMember { RoomId = room.Id, PartnerId = s.PartnerId, DisplayName = s.DisplayName, Role = s.Role, JoinedAt = now, Notify = NotifyLevel.All });
-        if (room.Members.Count == 1) return Error.Blocked("no_team", "فريق الكورس لسه مش متضاف على التطبيق. اسأل في جروب الكورس.");
+        if (room.Members.Count == 1) return Error.Blocked("no_team", "لم يُضَف فريق الدورة إلى التطبيق بعد. اطرح سؤالك في مجموعة الدورة.");
         db.Rooms.Add(room);
         db.Audit.Add(new ChatAudit { RoomId = room.Id, ActorPartnerId = user.PartnerId, Action = "question_opened", At = now });
         await db.SaveChangesAsync(ct);
@@ -190,7 +190,7 @@ public sealed class ChatService(
     public async Task<Result<MessageDto>> SendAsync(CurrentUser user, SendMessageRequest req, CancellationToken ct)
     {
         var member = await MemberAsync(req.RoomId, user.PartnerId, ct);
-        if (member?.Room is null) return Error.NotFound("room_not_found", "الجروب ده مش متاح لك.");
+        if (member?.Room is null) return Error.NotFound("room_not_found", "هذه المجموعة غير متاحة لك.");
         var room = member.Room;
         var body = (req.Body ?? "").Trim();
         var attachmentIds = (req.AttachmentIds ?? []).Distinct().Take(10).ToArray();
@@ -199,19 +199,19 @@ public sealed class ChatService(
             .OrderByDescending(x => x.Id).Select(x => (DateTime?)x.CreatedAt).FirstOrDefaultAsync(ct);
         if (ChatPolicy.CanPost(member, room, Now, lastOwn, body.Length, attachmentIds.Length) is { } denied) return denied;
         if (!member.IsStaff && !rateGuard.TryConsume(user.PartnerId))
-            return Error.Blocked("too_fast", "بتبعت رسايل بسرعة. استنى ثواني.");
+            return Error.Blocked("too_fast", "ترسل الرسائل بسرعة كبيرة. انتظر بضع ثوانٍ.");
 
         if (attachmentIds.Length > 0)
         {
             var owned = await db.Attachments.CountAsync(a => attachmentIds.Contains(a.Id) && a.RoomId == room.Id && a.UploaderPartnerId == user.PartnerId, ct);
-            if (owned != attachmentIds.Length) return Error.Validation("bad_attachment", "في ملف مش متاح. ارفعه تاني.");
+            if (owned != attachmentIds.Length) return Error.Validation("bad_attachment", "أحد الملفات غير متاح. ارفعه مرة أخرى.");
         }
 
         ChatMessage? replyTarget = null;
         if (req.ReplyToId is { } replyId)
         {
             replyTarget = await db.Messages.SingleOrDefaultAsync(x => x.Id == replyId && x.RoomId == room.Id, ct);
-            if (replyTarget is null) return Error.Validation("bad_reply", "الرسالة اللي بترد عليها مش موجودة.");
+            if (replyTarget is null) return Error.Validation("bad_reply", "الرسالة التي ترد عليها غير موجودة.");
         }
 
         var now = Now;
@@ -252,7 +252,7 @@ public sealed class ChatService(
             MemberRole.Instructor => $"م. {message.SenderName}",
             _ => message.SenderName,
         };
-        var text = message.DeletedAt is null && message.Body.Length > 0 ? message.Body : "أرسل ملف";
+        var text = message.DeletedAt is null && message.Body.Length > 0 ? message.Body : "أرسل ملفًا";
         notifications.PushOnly(pushTo, new PushMessage(
             Title: room.Kind == RoomKind.Question ? $"سؤال خاص · {room.Title}" : room.Title,
             Body: $"{who}: {Truncate(text, 140)}",
@@ -276,10 +276,10 @@ public sealed class ChatService(
 
     public async Task<Result<MessageDto>> ToggleReactionAsync(CurrentUser user, long messageId, string emoji, CancellationToken ct)
     {
-        if (!ChatPolicy.AllowedReactions.Contains(emoji)) return Error.Validation("bad_reaction", "الرياكشن ده مش متاح.");
+        if (!ChatPolicy.AllowedReactions.Contains(emoji)) return Error.Validation("bad_reaction", "هذا التفاعل غير متاح.");
         var (msg, member, error) = await MessageForAsync(user, messageId, ct);
         if (error is not null) return error;
-        if (msg!.DeletedAt is not null) return Error.Conflict("deleted", "الرسالة دي اتمسحت.");
+        if (msg!.DeletedAt is not null) return Error.Conflict("deleted", "حُذفت هذه الرسالة.");
         var existing = msg.Reactions.SingleOrDefault(r => r.PartnerId == user.PartnerId && r.Emoji == emoji);
         if (existing is null) db.Reactions.Add(new MessageReaction { MessageId = msg.Id, PartnerId = user.PartnerId, Emoji = emoji, At = Now });
         else db.Reactions.Remove(existing);
@@ -306,7 +306,7 @@ public sealed class ChatService(
         var (msg, member, error) = await MessageForAsync(user, messageId, ct);
         if (error is not null) return error;
         if (ChatPolicy.CanModerate(member) is { } denied) return denied;
-        if (msg!.DeletedAt is not null) return Error.Conflict("deleted", "الرسالة دي اتمسحت.");
+        if (msg!.DeletedAt is not null) return Error.Conflict("deleted", "حُذفت هذه الرسالة.");
         if (flag == "pin") msg.IsPinned = value; else msg.IsAnswer = value;
         db.Audit.Add(new ChatAudit { RoomId = msg.RoomId, ActorPartnerId = user.PartnerId, Action = value ? $"{flag}_set" : $"{flag}_cleared", Details = $"message {msg.Id}", At = Now });
         await db.SaveChangesAsync(ct);
@@ -324,14 +324,14 @@ public sealed class ChatService(
         await db.SaveChangesAsync(ct);
 
         var staff = await db.Members.Where(x => x.RoomId == msg.RoomId && x.RemovedAt == null && x.Role != MemberRole.Student).Select(x => x.PartnerId).ToListAsync(ct);
-        await notifications.NotifyAsync(staff, "chat_report", "بلاغ على رسالة", "متدرب بلّغ عن رسالة في الجروب. راجعها.", $"/chats/{msg.RoomId}", urgent: false, ct: ct);
+        await notifications.NotifyAsync(staff, "chat_report", "بلاغ على رسالة", "أبلغ متدرب عن رسالة في المجموعة. يُرجى مراجعتها.", $"/chats/{msg.RoomId}", urgent: false, ct: ct);
         return true;
     }
 
     public async Task<Result<RoomDetail>> UpdateRoomAsync(CurrentUser user, Guid roomId, RoomSettingsRequest req, CancellationToken ct)
     {
         var member = await MemberAsync(roomId, user.PartnerId, ct);
-        if (member?.Room is null) return Error.NotFound("room_not_found", "الجروب ده مش متاح لك.");
+        if (member?.Room is null) return Error.NotFound("room_not_found", "هذه المجموعة غير متاحة لك.");
         if (ChatPolicy.CanModerate(member) is { } denied) return denied;
         var room = member.Room;
         if (req.AnnouncementOnly is { } a && a != room.AnnouncementOnly)
@@ -355,8 +355,8 @@ public sealed class ChatService(
         var me = await MemberAsync(roomId, user.PartnerId, ct);
         if (ChatPolicy.CanModerate(me) is { } denied) return denied;
         var target = await db.Members.SingleOrDefaultAsync(x => x.RoomId == roomId && x.PartnerId == req.PartnerId && x.RemovedAt == null, ct);
-        if (target is null) return Error.NotFound("member_not_found", "العضو ده مش في الجروب.");
-        if (target.IsStaff) return Error.Forbidden("cannot_mute_staff", "مينفعش تكتم حد من فريق الكورس.");
+        if (target is null) return Error.NotFound("member_not_found", "هذا العضو ليس في المجموعة.");
+        if (target.IsStaff) return Error.Forbidden("cannot_mute_staff", "لا يمكن كتم أحد أعضاء فريق الدورة.");
         var minutes = Math.Clamp(req.Minutes, 0, 60 * 24 * 7);
         target.MutedUntil = minutes == 0 ? null : Now.AddMinutes(minutes);
         db.Audit.Add(new ChatAudit { RoomId = roomId, ActorPartnerId = user.PartnerId, Action = minutes == 0 ? "member_unmuted" : "member_muted", TargetPartnerId = target.PartnerId, Details = $"{minutes} min", At = Now });
@@ -398,10 +398,10 @@ public sealed class ChatService(
         var member = await MemberAsync(roomId, user.PartnerId, ct);
         if (ChatPolicy.CanUpload(member, member?.Room ?? new ChatRoom { Status = RoomStatus.Archived }, options.Value.StudentsCanUpload) is { } denied) return denied;
         var max = options.Value.MaxAttachmentMb * 1024L * 1024L;
-        if (file.Length == 0 || file.Length > max) return Error.Validation("file_size", $"حجم الملف لازم يكون أقل من {options.Value.MaxAttachmentMb} ميجا.");
+        if (file.Length == 0 || file.Length > max) return Error.Validation("file_size", $"يجب أن يكون حجم الملف أقل من {options.Value.MaxAttachmentMb} ميجابايت.");
         var ext = Path.GetExtension(file.FileName);
         if (!AllowedTypes.TryGetValue(ext, out var contentType))
-            return Error.Validation("file_type", "نوع الملف ده مش مسموح. المسموح: صور، PDF، ملفات أوفيس، DWG، ZIP، وتسجيلات صوت.");
+            return Error.Validation("file_type", "نوع الملف غير مسموح. المسموح: الصور، وPDF، وملفات أوفيس، وDWG، وZIP، والتسجيلات الصوتية.");
 
         var id = Guid.NewGuid();
         var dir = Path.Combine(StorageRoot, roomId.ToString("N"));
@@ -426,7 +426,7 @@ public sealed class ChatService(
             var head = new byte[16];
             await using var check = File.OpenRead(path);
             _ = await check.ReadAsync(head, ct);
-            if (!Media.Sniff(head).StartsWith("image/")) { File.Delete(path); return Error.Validation("file_type", "الصورة دي مش سليمة."); }
+            if (!Media.Sniff(head).StartsWith("image/")) { File.Delete(path); return Error.Validation("file_type", "هذه الصورة غير صالحة."); }
         }
 
         var name = Path.GetFileName(file.FileName);
@@ -443,10 +443,10 @@ public sealed class ChatService(
     public async Task<Result<ChatAttachment>> GetAttachmentAsync(CurrentUser user, Guid attachmentId, CancellationToken ct)
     {
         var a = await db.Attachments.SingleOrDefaultAsync(x => x.Id == attachmentId, ct);
-        if (a is null) return Error.NotFound("file_not_found", "الملف ده مش موجود.");
+        if (a is null) return Error.NotFound("file_not_found", "هذا الملف غير موجود.");
         var m = await ReadableAsync(user, a.RoomId, ct);
-        if (!m.IsSuccess) return Error.NotFound("file_not_found", "الملف ده مش موجود.");
-        return File.Exists(a.StoragePath) ? a : Error.NotFound("file_not_found", "الملف ده مش موجود.");
+        if (!m.IsSuccess) return Error.NotFound("file_not_found", "هذا الملف غير موجود.");
+        return File.Exists(a.StoragePath) ? a : Error.NotFound("file_not_found", "هذا الملف غير موجود.");
     }
 
     private string StorageRoot => Path.IsPathRooted(options.Value.StoragePath)
@@ -458,10 +458,10 @@ public sealed class ChatService(
     private async Task<(ChatMessage? Message, RoomMember? Member, Error? Error)> MessageForAsync(CurrentUser user, long messageId, CancellationToken ct)
     {
         var msg = await db.Messages.Include(x => x.Reactions).SingleOrDefaultAsync(x => x.Id == messageId, ct);
-        if (msg is null) return (null, null, Error.NotFound("message_not_found", "الرسالة دي مش موجودة."));
+        if (msg is null) return (null, null, Error.NotFound("message_not_found", "هذه الرسالة غير موجودة."));
         var member = await MemberAsync(msg.RoomId, user.PartnerId, ct);
         if (member?.Room is null || ChatPolicy.CanRead(member, member.Room) is not null)
-            return (null, null, Error.NotFound("message_not_found", "الرسالة دي مش موجودة."));
+            return (null, null, Error.NotFound("message_not_found", "هذه الرسالة غير موجودة."));
         return (msg, member, null);
     }
 
@@ -496,7 +496,7 @@ public sealed class ChatService(
                     .Select(a => new AttachmentDto(a.Id, a.FileName, a.ContentType, a.Size)).ToList();
             ReplyDto? reply = null;
             if (m.ReplyToId is { } rid && replies.TryGetValue(rid, out var r))
-                reply = new ReplyDto(r.Id, r.SenderName, r.DeletedAt is null ? Truncate(r.Body.Length > 0 ? r.Body : "ملف", 120) : "رسالة اتمسحت");
+                reply = new ReplyDto(r.Id, r.SenderName, r.DeletedAt is null ? Truncate(r.Body.Length > 0 ? r.Body : "ملف", 120) : "رسالة محذوفة");
             var reactions = m.Reactions.GroupBy(x => x.Emoji).Select(g => new ReactionDto(g.Key, g.Select(x => x.PartnerId).ToArray())).ToList();
             return new MessageDto(m.Id, m.RoomId, new SenderDto(m.SenderPartnerId, m.SenderName, m.SenderRole.ToString().ToLowerInvariant()),
                 deleted ? "" : m.Body, reply, files, deleted ? [] : reactions, m.IsAnswer, m.IsPinned, deleted, DateTime.SpecifyKind(m.CreatedAt, DateTimeKind.Utc));
@@ -505,7 +505,7 @@ public sealed class ChatService(
 
     private static MessagePreview Preview(ChatMessage m) =>
         new(m.Id, m.SenderName, m.SenderRole.ToString().ToLowerInvariant(),
-            m.DeletedAt is not null ? "رسالة اتمسحت" : m.Body.Length > 0 ? Truncate(m.Body, 100) : "📎 ملف",
+            m.DeletedAt is not null ? "رسالة محذوفة" : m.Body.Length > 0 ? Truncate(m.Body, 100) : "📎 ملف",
             DateTime.SpecifyKind(m.CreatedAt, DateTimeKind.Utc));
 
     private static string Truncate(string s, int max) => s.Length <= max ? s : s[..max] + "…";

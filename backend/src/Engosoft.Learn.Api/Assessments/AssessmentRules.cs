@@ -31,31 +31,31 @@ public static partial class AssessmentRules
 
     public static Error? CanAttempt(Assessment a, int attemptsSoFar, DateTime now)
     {
-        if (a.Kind != AssessmentKind.Quiz) return Error.Validation("not_a_quiz", "ده تاسك مش اختبار.");
-        if (a.Status != AssessmentStatus.Published) return Error.Blocked("not_open", "الاختبار ده مش متاح دلوقتي.");
-        if (a.DueAt is { } due && now > due) return Error.Blocked("past_due", "ميعاد الاختبار خلص.");
-        if (attemptsSoFar >= a.MaxAttempts) return Error.Blocked("no_attempts_left", $"استخدمت كل المحاولات ({a.MaxAttempts}).");
+        if (a.Kind != AssessmentKind.Quiz) return Error.Validation("not_a_quiz", "هذه مهمة وليست اختبارًا.");
+        if (a.Status != AssessmentStatus.Published) return Error.Blocked("not_open", "هذا الاختبار غير متاح حاليًا.");
+        if (a.DueAt is { } due && now > due) return Error.Blocked("past_due", "انتهى موعد الاختبار.");
+        if (attemptsSoFar >= a.MaxAttempts) return Error.Blocked("no_attempts_left", $"استنفدت جميع المحاولات ({a.MaxAttempts}).");
         return null;
     }
 
     public static Error? CanSubmitTask(Assessment a)
     {
-        if (a.Kind != AssessmentKind.Task) return Error.Validation("not_a_task", "ده اختبار مش تاسك.");
-        if (a.Status != AssessmentStatus.Published) return Error.Blocked("not_open", "التاسك ده مش متاح دلوقتي.");
+        if (a.Kind != AssessmentKind.Task) return Error.Validation("not_a_task", "هذا اختبار وليس مهمة.");
+        if (a.Status != AssessmentStatus.Published) return Error.Blocked("not_open", "هذه المهمة غير متاحة حاليًا.");
         return null;
     }
 
     /// <summary>A quiz can be published only when every question has text, at least two options and exactly one right answer.</summary>
     public static Error? ValidateForPublish(Assessment a)
     {
-        if (string.IsNullOrWhiteSpace(a.Title)) return Error.Validation("no_title", "اكتب عنوان.");
+        if (string.IsNullOrWhiteSpace(a.Title)) return Error.Validation("no_title", "اكتب عنوانًا.");
         if (a.Kind == AssessmentKind.Task) return null;
-        if (a.Questions.Count == 0) return Error.Validation("no_questions", "ضيف سؤال واحد على الأقل.");
+        if (a.Questions.Count == 0) return Error.Validation("no_questions", "أضف سؤالًا واحدًا على الأقل.");
         foreach (var (q, i) in a.Questions.OrderBy(q => q.Order).Select((q, i) => (q, i + 1)))
         {
-            if (string.IsNullOrWhiteSpace(q.Text)) return Error.Validation("empty_question", $"السؤال {i} فاضي.");
-            if (q.Options.Count(o => !string.IsNullOrWhiteSpace(o.Text)) < 2) return Error.Validation("few_options", $"السؤال {i} محتاج اختيارين على الأقل.");
-            if (q.Options.Count(o => o.IsCorrect) != 1) return Error.Validation("one_correct", $"السؤال {i} لازم يكون ليه إجابة صحيحة واحدة.");
+            if (string.IsNullOrWhiteSpace(q.Text)) return Error.Validation("empty_question", $"السؤال {i} فارغ.");
+            if (q.Options.Count(o => !string.IsNullOrWhiteSpace(o.Text)) < 2) return Error.Validation("few_options", $"يحتاج السؤال {i} إلى خيارين على الأقل.");
+            if (q.Options.Count(o => o.IsCorrect) != 1) return Error.Validation("one_correct", $"يجب أن تكون للسؤال {i} إجابة صحيحة واحدة.");
         }
         return null;
     }

@@ -70,7 +70,7 @@ export function initials(name: string) {
 }
 
 const WEEKDAYS_AR: Record<string, string> = {
-  saturday: 'السبت', sunday: 'الأحد', monday: 'الاتنين', tuesday: 'التلات', wednesday: 'الأربع', thursday: 'الخميس', friday: 'الجمعة',
+  saturday: 'السبت', sunday: 'الأحد', monday: 'الاثنين', tuesday: 'الثلاثاء', wednesday: 'الأربعاء', thursday: 'الخميس', friday: 'الجمعة',
 }
 export function weekday(name: string, lang: Lang) {
   return lang === 'ar' ? WEEKDAYS_AR[name] ?? name : name[0].toUpperCase() + name.slice(1)

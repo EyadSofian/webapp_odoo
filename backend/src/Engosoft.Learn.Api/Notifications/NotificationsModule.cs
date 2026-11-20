@@ -50,7 +50,7 @@ public static class NotificationsModule
         {
             if (!Uri.TryCreate(body.Endpoint, UriKind.Absolute, out var uri) || uri.Scheme != "https" || body.Keys is null
                 || string.IsNullOrEmpty(body.Keys.P256dh) || string.IsNullOrEmpty(body.Keys.Auth) || body.Endpoint.Length > 1000)
-                return Error.Validation("bad_subscription", "الاشتراك في الإشعارات مش سليم.").ToProblem();
+                return Error.Validation("bad_subscription", "الاشتراك في الإشعارات غير صالح.").ToProblem();
             var existing = await db.PushSubscriptions.SingleOrDefaultAsync(s => s.Endpoint == body.Endpoint, ct);
             if (existing is null)
                 db.PushSubscriptions.Add(existing = new Data.PushSubscription { Endpoint = body.Endpoint, CreatedAt = clock.GetUtcNow().UtcDateTime });
@@ -71,7 +71,7 @@ public static class NotificationsModule
 
         g.MapPost("/push/test", (NotificationService n, CurrentUser u) =>
         {
-            n.PushOnly([u.PartnerId], new PushMessage("الإشعارات شغالة ✓", "هيوصلك تنبيه قبل كل محاضرة، ولما المحاضر يرد عليك.", "/", "test", Urgent: true));
+            n.PushOnly([u.PartnerId], new PushMessage("الإشعارات مفعّلة ✓", "سيصلك تنبيه قبل كل محاضرة، وعندما يرد عليك المحاضر.", "/", "test", Urgent: true));
             return Results.Accepted();
         });
 
@@ -94,7 +94,7 @@ public static class NotificationsModule
         g.MapPut("/preferences", async (PreferencesDto body, AppDbContext db, CurrentUser u, TimeProvider clock, CancellationToken ct) =>
         {
             try { TimeZoneInfo.FindSystemTimeZoneById(body.TimeZone); }
-            catch { return Error.Validation("bad_timezone", "المنطقة الزمنية مش صحيحة.").ToProblem(); }
+            catch { return Error.Validation("bad_timezone", "المنطقة الزمنية غير صحيحة.").ToProblem(); }
             var p = await db.Preferences.FindAsync([u.PartnerId], ct);
             if (p is null) db.Preferences.Add(p = new UserPreference { PartnerId = u.PartnerId });
             p.QuietHoursEnabled = body.QuietHoursEnabled;
@@ -180,9 +180,9 @@ public static class NotificationsModule
     private static async Task OnSessionChangedAsync(IServiceProvider sp, int trackId, CancellationToken ct)
     {
         if (await AudienceAsync(sp, trackId, ct) is not { } a || a.People.Count == 0) return;
-        var when = a.Start is { } s ? FormatLocal(s, a.Tz) : "ميعاد جديد";
+        var when = a.Start is { } s ? FormatLocal(s, a.Tz) : "موعد جديد";
         await sp.GetRequiredService<NotificationService>().NotifyAsync(a.People, "session_changed",
-            $"تعديل في ميعاد المحاضرة · {a.EventName}", $"{a.TrackName}: {when}", $"/live/{a.EventId}?session={trackId}",
+            $"تعديل في موعد المحاضرة · {a.EventName}", $"{a.TrackName}: {when}", $"/live/{a.EventId}?session={trackId}",
             urgent: true, tag: $"session-{trackId}", ct: ct);
     }
 
@@ -190,7 +190,7 @@ public static class NotificationsModule
     {
         if (await AudienceAsync(sp, trackId, ct) is not { } a || a.People.Count == 0) return;
         await sp.GetRequiredService<NotificationService>().NotifyAsync(a.People, "recording_ready",
-            $"التسجيل جاهز · {a.EventName}", $"{a.TrackName}. تقدر تتفرج عليه دلوقتي.", $"/sessions/{trackId}",
+            $"التسجيل متاح · {a.EventName}", $"{a.TrackName}. يمكنك مشاهدته الآن.", $"/sessions/{trackId}",
             tag: $"recording-{trackId}", ct: ct);
     }
 
@@ -201,7 +201,7 @@ public static class NotificationsModule
         if (doc.Str("source") != "manual" || doc.M2O("track_id") is not { } track) return;
         if (await AudienceAsync(sp, track.Id, ct) is not { } a || a.People.Count == 0) return;
         await sp.GetRequiredService<NotificationService>().NotifyAsync(a.People, "document_added",
-            $"ملف جديد · {a.EventName}", $"المحاضر رفع ملف في {a.TrackName}.", $"/sessions/{track.Id}",
+            $"ملف جديد · {a.EventName}", $"رفع المحاضر ملفًا في {a.TrackName}.", $"/sessions/{track.Id}",
             tag: $"docs-{track.Id}", ct: ct);
     }
 

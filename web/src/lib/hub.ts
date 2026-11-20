@@ -90,5 +90,5 @@ export const chatHub = {
 export function hubErrorMessage(error: unknown) {
   const raw = error instanceof Error ? error.message : String(error)
   const idx = raw.indexOf('HubException:')
-  return idx >= 0 ? raw.slice(idx + 'HubException:'.length).trim() : 'الرسالة موصلتش. جرّب تاني.'
+  return idx >= 0 ? raw.slice(idx + 'HubException:'.length).trim() : 'لم تُرسَل الرسالة. أعد المحاولة.'
 }

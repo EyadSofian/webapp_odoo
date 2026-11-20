@@ -25,7 +25,7 @@ export function CertificatesScreen() {
             <div className="p-3">
               <p className="line-clamp-2 font-bold">{c.title}</p>
               <p className="mt-1 text-xs text-muted">
-                {c.type === 'attendance' ? (lang === 'ar' ? 'شهادة حضور' : 'Attendance') : (lang === 'ar' ? 'كورس مسجّل' : 'Recorded course')}
+                {c.type === 'attendance' ? (lang === 'ar' ? 'شهادة حضور' : 'Attendance') : (lang === 'ar' ? 'دورة مسجّلة' : 'Recorded course')}
                 {c.issuedAt && <> · <span className="num">{formatDate(c.issuedAt, lang)}</span></>}
               </p>
             </div>

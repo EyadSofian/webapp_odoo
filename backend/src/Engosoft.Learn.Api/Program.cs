@@ -73,7 +73,7 @@ services.AddRateLimiter(o =>
     {
         if (ctx.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retry))
             ctx.HttpContext.Response.Headers.RetryAfter = ((int)retry.TotalSeconds).ToString();
-        await ctx.HttpContext.Response.WriteAsJsonAsync(new { title = "rate_limited", detail = "طلبات كتير ورا بعض. استنى شوية وجرّب تاني." }, ct);
+        await ctx.HttpContext.Response.WriteAsJsonAsync(new { title = "rate_limited", detail = "طلبات كثيرة متتالية. انتظر قليلًا ثم أعد المحاولة." }, ct);
     };
     // Sign-in: per address, to slow down password guessing.
     o.AddPolicy("login", http => RateLimitPartition.GetFixedWindowLimiter(
@@ -163,7 +163,7 @@ internal sealed class UpstreamExceptionHandler(ILogger<UpstreamExceptionHandler>
         IResult? result = ex switch
         {
             OdooException or HttpRequestException or TaskCanceledException when !ct.IsCancellationRequested => Error.Upstream().ToProblem(),
-            UnauthorizedAccessException => Error.Unauthorized("session", "سجّل دخول تاني.").ToProblem(),
+            UnauthorizedAccessException => Error.Unauthorized("session", "سجّل الدخول مرة أخرى.").ToProblem(),
             _ => null,
         };
         if (result is null) return false;

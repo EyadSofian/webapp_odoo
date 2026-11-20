@@ -12,6 +12,7 @@ import { LoginScreen } from './screens/LoginScreen'
 import { HomeScreen } from './screens/HomeScreen'
 import { ChatsLayout, ChatsPlaceholder } from './screens/ChatsScreen'
 import './index.css'
+import './lib/theme'
 
 // Screens load on first visit, so the first paint on a phone only downloads what it shows.
 const CoursesScreen = lazy(() => import('./screens/CoursesScreen').then((m) => ({ default: m.CoursesScreen })))
@@ -54,7 +55,7 @@ function UpdatePrompt() {
   useEffect(() => {
     const update = registerSW({
       onNeedRefresh() {
-        toast({ kind: 'info', text: lang === 'ar' ? 'في نسخة جديدة من التطبيق' : 'A new version is ready', action: { label: lang === 'ar' ? 'حدّث' : 'Update', run: () => update(true) } })
+        toast({ kind: 'info', text: lang === 'ar' ? 'يتوفر إصدار جديد من التطبيق' : 'A new version is ready', action: { label: lang === 'ar' ? 'تحديث' : 'Update', run: () => update(true) } })
       },
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps

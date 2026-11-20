@@ -46,7 +46,7 @@ public sealed class IdentityResolver(IOdooClient odoo, IOptions<AuthOptions> aut
     {
         var users = await odoo.ReadAsync("res.users", [uid], ["name", "partner_id", "share", "active", "login", "lang"], ct);
         if (users.Count == 0 || !users[0].Bool("active"))
-            return Error.Forbidden("inactive", "الحساب ده مش متاح. كلّم الدعم الفني.");
+            return Error.Forbidden("inactive", "هذا الحساب غير متاح. تواصل مع الدعم الفني.");
 
         var u = users[0];
         var partner = u.M2O("partner_id")!.Value;
@@ -64,7 +64,7 @@ public sealed class IdentityResolver(IOdooClient odoo, IOptions<AuthOptions> aut
         if (isInstructor)
             return (new CurrentUser(uid, partner.Id, name, UserKind.Instructor), email, lang);
 
-        return Error.Forbidden("not_allowed", "التطبيق ده للمتدربين والمحاضرين بس.");
+        return Error.Forbidden("not_allowed", "هذا التطبيق مخصص للمتدربين والمحاضرين فقط.");
     }
 }
 
@@ -169,7 +169,7 @@ public static class AuthModule
         {
             var email = body.Email?.Trim().ToLowerInvariant() ?? "";
             if (email.Length is < 3 or > 254 || string.IsNullOrEmpty(body.Password) || body.Password.Length > 256)
-                return Error.Validation("invalid_input", "اكتب الإيميل وكلمة المرور.").ToProblem();
+                return Error.Validation("invalid_input", "اكتب البريد الإلكتروني وكلمة المرور.").ToProblem();
 
             int? uid;
             try { uid = await odoo.AuthenticateAsync(email, body.Password, ct); }
@@ -179,7 +179,7 @@ public static class AuthModule
                 return Error.Upstream().ToProblem();
             }
             if (uid is null)
-                return Error.Unauthorized("bad_credentials", "الإيميل أو كلمة المرور مش صح.").ToProblem();
+                return Error.Unauthorized("bad_credentials", "البريد الإلكتروني أو كلمة المرور غير صحيحة.").ToProblem();
 
             var resolved = await identity.ResolveAsync(uid.Value, ct);
             if (!resolved.IsSuccess) return resolved.Error!.ToProblem();
@@ -191,21 +191,21 @@ public static class AuthModule
             TimeProvider clock, HttpContext http, CancellationToken ct) =>
         {
             if (string.IsNullOrWhiteSpace(body.RefreshToken))
-                return Error.Unauthorized("invalid_refresh", "سجّل دخول تاني.").ToProblem();
+                return Error.Unauthorized("invalid_refresh", "سجّل الدخول مرة أخرى.").ToProblem();
             var hash = TokenService.Hash(body.RefreshToken);
             var now = clock.GetUtcNow().UtcDateTime;
             var stored = await db.RefreshTokens.SingleOrDefaultAsync(t => t.TokenHash == hash, ct);
             if (stored is null || stored.ExpiresAt < now)
-                return Error.Unauthorized("invalid_refresh", "سجّل دخول تاني.").ToProblem();
+                return Error.Unauthorized("invalid_refresh", "سجّل الدخول مرة أخرى.").ToProblem();
             if (stored.RevokedAt is not null)
             {
                 // Two tabs refreshing at the same moment: the loser gets a plain 401 and picks up the winner's tokens.
                 if (stored.ReplacedById is not null && now - stored.RevokedAt.Value < TimeSpan.FromSeconds(60))
-                    return Error.Unauthorized("invalid_refresh", "سجّل دخول تاني.").ToProblem();
+                    return Error.Unauthorized("invalid_refresh", "سجّل الدخول مرة أخرى.").ToProblem();
                 // A rotated token came back later: treat it as stolen and end every session of this user.
                 await db.RefreshTokens.Where(t => t.PartnerId == stored.PartnerId && t.RevokedAt == null)
                     .ExecuteUpdateAsync(s => s.SetProperty(t => t.RevokedAt, now), ct);
-                return Error.Unauthorized("invalid_refresh", "سجّل دخول تاني.").ToProblem();
+                return Error.Unauthorized("invalid_refresh", "سجّل الدخول مرة أخرى.").ToProblem();
             }
 
             // Re-check in Odoo on every refresh so a deactivated account loses access within one token lifetime.
@@ -239,7 +239,7 @@ public static class AuthModule
             {
                 if (!dev.Value.AllowImpersonation) return Results.NotFound();
                 var users = await odoo.SearchReadAsync("res.users", D(("partner_id", "=", body.PartnerId)), ["id"], limit: 1, ct: ct);
-                if (users.Count == 0) return Error.NotFound("no_user", "مفيش يوزر للشريك ده.").ToProblem();
+                if (users.Count == 0) return Error.NotFound("no_user", "لا يوجد مستخدم لهذا الشريك.").ToProblem();
                 var resolved = await identity.ResolveAsync(users[0].Id(), ct);
                 if (!resolved.IsSuccess) return resolved.Error!.ToProblem();
                 var (user, mail, lang) = resolved.Value;

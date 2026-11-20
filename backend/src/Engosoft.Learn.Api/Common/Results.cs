@@ -8,12 +8,12 @@ public enum ErrorKind { Validation, NotFound, Forbidden, Conflict, Blocked, Unau
 public sealed record Error(ErrorKind Kind, string Code, string Message)
 {
     public static Error Validation(string code, string message) => new(ErrorKind.Validation, code, message);
-    public static Error NotFound(string code = "not_found", string message = "العنصر ده مش موجود.") => new(ErrorKind.NotFound, code, message);
-    public static Error Forbidden(string code = "forbidden", string message = "مش مسموح لك تشوف ده.") => new(ErrorKind.Forbidden, code, message);
+    public static Error NotFound(string code = "not_found", string message = "هذا العنصر غير موجود.") => new(ErrorKind.NotFound, code, message);
+    public static Error Forbidden(string code = "forbidden", string message = "غير مسموح لك بعرض هذا المحتوى.") => new(ErrorKind.Forbidden, code, message);
     public static Error Blocked(string code, string message) => new(ErrorKind.Blocked, code, message);
     public static Error Conflict(string code, string message) => new(ErrorKind.Conflict, code, message);
     public static Error Unauthorized(string code, string message) => new(ErrorKind.Unauthorized, code, message);
-    public static Error Upstream(string message = "منصة إنجوسوفت مش بترد دلوقتي. جرّب تاني بعد شوية.") => new(ErrorKind.Upstream, "upstream_unavailable", message);
+    public static Error Upstream(string message = "منصة إنجوسوفت لا تستجيب حاليًا. أعد المحاولة بعد قليل.") => new(ErrorKind.Upstream, "upstream_unavailable", message);
 }
 
 public readonly struct Result<T>
