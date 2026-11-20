@@ -1,0 +1,18 @@
+# .NET
+backend/**/bin/
+backend/**/obj/
+backend/src/Engosoft.Learn.Api/storage/
+backend/src/Engosoft.Learn.Api/wwwroot/
+*.user
+
+# Web
+web/node_modules/
+web/dist/
+web/dev-dist/
+
+# Local
+.env
+.env.*
+.DS_Store
+*.tsbuildinfo
+.claude/

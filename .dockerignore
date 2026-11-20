@@ -1,0 +1,15 @@
+**/bin/
+**/obj/
+**/node_modules/
+web/dist/
+web/dev-dist/
+backend/src/Engosoft.Learn.Api/storage/
+backend/src/Engosoft.Learn.Api/wwwroot/
+backend/tests/
+docs/
+.claude/
+.git/
+.env
+.env.*
+**/.DS_Store
+**/*.tsbuildinfo

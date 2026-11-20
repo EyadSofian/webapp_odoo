@@ -1,0 +1,129 @@
+@import '@fontsource/tajawal/400.css';
+@import '@fontsource/tajawal/500.css';
+@import '@fontsource/tajawal/700.css';
+@import '@fontsource/noto-kufi-arabic/500.css';
+@import '@fontsource/noto-kufi-arabic/700.css';
+@import '@fontsource/manrope/500.css';
+@import '@fontsource/manrope/700.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  Engosoft identity, taken from engosoft.com: brand blue #1656A0, deep navy #06203A,
+  slate #8595A2, paper #FDFCFC, mist #F3F2F2. Values are RGB triplets so Tailwind can add opacity.
+*/
+:root {
+  --brand-50: 238 244 251;
+  --brand-100: 214 229 245;
+  --brand-200: 173 201 234;
+  --brand-300: 127 168 218;
+  --brand-400: 76 130 196;
+  --brand-500: 22 86 160;
+  --brand-600: 18 69 128;
+  --brand-700: 14 56 102;
+  --brand-800: 10 42 77;
+  --brand-900: 6 32 58;
+
+  --bg: 245 246 248;
+  --surface: 255 255 255;
+  --sunken: 238 241 245;
+  --ink: 17 24 39;
+  --muted: 100 113 128;
+  --line: 226 231 237;
+  --shadow: 6 32 58;
+
+  --accent: 22 86 160;
+  --live: 229 72 77;
+  --ok: 31 157 85;
+  --warn: 214 120 20;
+  --gold: 245 166 35;
+
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --brand-50: 17 37 61;
+    --brand-100: 22 48 80;
+    --brand-200: 35 70 112;
+    --accent: 125 173 236;
+
+    --bg: 8 17 28;
+    --surface: 15 27 42;
+    --sunken: 21 36 54;
+    --ink: 232 238 245;
+    --muted: 148 163 180;
+    --line: 34 50 70;
+    --shadow: 0 0 0;
+    color-scheme: dark;
+  }
+}
+
+@layer base {
+  html { -webkit-tap-highlight-color: transparent; text-size-adjust: 100%; }
+  body {
+    @apply bg-bg text-ink font-sans antialiased;
+    font-size: 16px;
+    line-height: 1.6;
+    overscroll-behavior-y: none;
+  }
+  h1, h2, h3 { @apply font-display; text-wrap: balance; }
+  :focus-visible { @apply outline-none ring-2 ring-brand-400 ring-offset-2 ring-offset-bg; }
+  input, textarea, button, select { font: inherit; }
+  .num { font-family: Manrope, Tajawal, sans-serif; font-variant-numeric: tabular-nums; }
+  [dir='rtl'] .flip-rtl { transform: scaleX(-1); }
+  /* Mixed Arabic/English titles: follow the text's own direction (so truncation keeps the beginning), but stay on the page's side. */
+  html[dir='rtl'] .bidi { text-align: right; }
+  html[dir='ltr'] .bidi { text-align: left; }
+}
+
+@layer components {
+  .card { @apply bg-surface rounded-2xl shadow-card; }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 h-11 font-bold text-[15px] transition
+           active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none select-none;
+  }
+  .btn-primary { @apply btn bg-brand-500 text-white hover:bg-brand-600; }
+  .btn-soft { @apply btn bg-brand-50 text-accent hover:bg-brand-100; }
+  .btn-ghost { @apply btn bg-transparent text-ink hover:bg-sunken; }
+  .btn-live { @apply btn bg-live text-white hover:brightness-95; }
+  .chip { @apply inline-flex items-center gap-1 rounded-full px-2.5 h-6 text-xs font-bold whitespace-nowrap; }
+  .field {
+    @apply w-full h-12 rounded-xl bg-surface border border-line px-4 text-[16px] text-ink placeholder:text-muted/70
+           focus:border-brand-400 focus:ring-4 focus:ring-brand-100 outline-none transition;
+  }
+  .section-title { @apply font-display font-bold text-[17px] text-ink; }
+  .skeleton { @apply relative overflow-hidden bg-sunken rounded-xl; }
+  .skeleton::after {
+    content: '';
+    @apply absolute inset-0 animate-shimmer;
+    background: linear-gradient(90deg, transparent, rgb(var(--surface) / 0.55), transparent);
+    transform: translateX(100%);
+  }
+  .pb-nav { padding-bottom: calc(76px + var(--safe-bottom)); }
+  @media (min-width: 768px) { .pb-nav { padding-bottom: 32px; } }
+  .pt-safe { padding-top: var(--safe-top); }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { scrollbar-width: none; }
+  .prose-lesson { @apply text-[16px] leading-8; }
+  .prose-lesson h1, .prose-lesson h2, .prose-lesson h3 { @apply font-display font-bold mt-6 mb-2; }
+  .prose-lesson p { @apply my-3; }
+  .prose-lesson ul { @apply list-disc ps-6 my-3; }
+  .prose-lesson ol { @apply list-decimal ps-6 my-3; }
+  .prose-lesson img { @apply rounded-xl my-4 max-w-full h-auto; }
+  .prose-lesson a { @apply text-accent underline underline-offset-4; }
+}
+
+
+@layer components {
+  .lift { @apply transition duration-200; }
+  @media (hover: hover) { .lift:hover { transform: translateY(-3px); box-shadow: 0 18px 40px -18px rgb(var(--shadow) / 0.35); } }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
