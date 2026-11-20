@@ -11,7 +11,7 @@ export default defineConfig({
       strategies: 'injectManifest',
       srcDir: 'src',
       filename: 'sw.ts',
-      registerType: 'prompt',
+      registerType: 'autoUpdate',
       injectRegister: false,
       devOptions: { enabled: true, type: 'module' },
       injectManifest: { globPatterns: ['**/*.{js,css,html,png,webp,svg,woff2}'] },

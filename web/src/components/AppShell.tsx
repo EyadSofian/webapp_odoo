@@ -28,7 +28,7 @@ const tabs: { to: string; icon: typeof Home; label: Key; badge?: keyof Badges }[
 function Count({ n }: { n?: number }) {
   if (!n) return null
   return (
-    <span className="num absolute -top-1.5 start-[55%] min-w-[18px] rounded-full bg-live px-1 text-center text-[10px] font-bold leading-[18px] text-white ring-2 ring-surface">
+    <span className="num absolute -top-1.5 start-[60%] min-w-[18px] rounded-full bg-live px-1 text-center text-[10px] font-semibold leading-[18px] text-white ring-2 ring-surface">
       {n > 99 ? '99+' : n}
     </span>
   )
@@ -162,19 +162,20 @@ export function AppShell() {
       </main>
 
       {!fullScreen && (
-        <nav className="fixed inset-x-0 bottom-0 z-40 bg-surface/92 pb-[var(--safe-bottom)] shadow-bar backdrop-blur-xl md:hidden">
-          <div className="mx-auto flex h-[64px] max-w-lg items-stretch">
+        <nav className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-3 pb-[calc(8px+var(--safe-bottom))] md:hidden">
+          {/* Floats over the content on glass, inset from the edges, like the system tab bar */}
+          <div className="pointer-events-auto mx-auto flex h-16 max-w-md items-stretch gap-1 rounded-[22px] border border-ink/[0.08] bg-surface/80 p-1.5 shadow-[0_8px_24px_rgb(0_0_0/0.10)] backdrop-blur-2xl backdrop-saturate-150 dark:shadow-[0_8px_24px_rgb(0_0_0/0.45)]">
             {tabs.map(({ to, icon: Icon, label, badge }) => (
               <NavLink key={to} to={to} end={to === '/'}
-                className={({ isActive }) => clsx('relative flex flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-bold transition', isActive ? 'text-accent' : 'text-muted')}>
+                className={({ isActive }) => clsx('relative flex flex-1 flex-col items-center justify-center gap-1 rounded-[16px] text-[11px] font-medium transition-colors', isActive ? 'text-accent' : 'text-muted active:text-ink')}>
                 {({ isActive }) => (
                   <>
-                    <span className="relative grid h-8 w-14 place-items-center">
-                      {isActive && <motion.span layoutId="tab-pill" className="absolute inset-0 rounded-full bg-brand-50" transition={{ type: 'spring', stiffness: 460, damping: 34 }} />}
-                      <Icon className="relative h-[22px] w-[22px]" strokeWidth={isActive ? 2.4 : 2} />
+                    {isActive && <motion.span layoutId="tab-pill" className="absolute inset-0 rounded-[16px] bg-ink/[0.06]" transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }} />}
+                    <span className="relative">
+                      <Icon className="h-[22px] w-[22px]" strokeWidth={isActive ? 2 : 1.75} />
                       {badge && <Count n={badges?.[badge]} />}
                     </span>
-                    <span>{t(label)}</span>
+                    <span className="relative leading-none">{t(label)}</span>
                   </>
                 )}
               </NavLink>

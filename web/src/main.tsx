@@ -5,8 +5,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { registerSW } from 'virtual:pwa-register'
 import { ApiError } from './lib/api'
 import { AuthProvider, useAuth } from './lib/auth'
-import { I18nProvider, useI18n } from './lib/i18n'
-import { ToastProvider, useToast } from './components/ui'
+import { I18nProvider } from './lib/i18n'
+import { ToastProvider } from './components/ui'
 import { AppShell } from './components/AppShell'
 import { LoginScreen } from './screens/LoginScreen'
 import { HomeScreen } from './screens/HomeScreen'
@@ -48,17 +48,15 @@ function GuestOnly({ children }: { children: ReactNode }) {
   return user ? <Navigate to="/" replace /> : <>{children}</>
 }
 
-/** Offers the new version when one is deployed, instead of switching under the learner's feet. */
+/** New deploys apply on their own: the new service worker takes over and the page reloads once. Checks hourly while open. */
 function UpdatePrompt() {
-  const toast = useToast()
-  const { lang } = useI18n()
   useEffect(() => {
-    const update = registerSW({
-      onNeedRefresh() {
-        toast({ kind: 'info', text: lang === 'ar' ? 'يتوفر إصدار جديد من التطبيق' : 'A new version is ready', action: { label: lang === 'ar' ? 'تحديث' : 'Update', run: () => update(true) } })
+    registerSW({
+      immediate: true,
+      onRegisteredSW(_url, reg) {
+        if (reg) setInterval(() => { void reg.update().catch(() => undefined) }, 60 * 60 * 1000)
       },
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   return null
 }

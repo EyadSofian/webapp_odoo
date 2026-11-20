@@ -64,7 +64,13 @@ public sealed class IdentityResolver(IOdooClient odoo, IOptions<AuthOptions> aut
         if (isInstructor)
             return (new CurrentUser(uid, partner.Id, name, UserKind.Instructor), email, lang);
 
-        return Error.Forbidden("not_allowed", "هذا التطبيق مخصص للمتدربين والمحاضرين فقط.");
+        // Engosoft staff who are themselves enrolled (a live seat or a recorded course) use the app as learners.
+        var enrolled = await odoo.SearchCountAsync("event.registration", D(("partner_id", "=", partner.Id), ("state", "in", new[] { "open", "done" })), ct) > 0
+                       || await odoo.SearchCountAsync("slide.channel.partner", D(("partner_id", "=", partner.Id)), ct) > 0;
+        if (enrolled)
+            return (new CurrentUser(uid, partner.Id, name, UserKind.Student), email, lang);
+
+        return Error.Forbidden("not_allowed", "هذا التطبيق مخصص للمتدربين والمحاضرين. لا توجد دورات مسجّلة على هذا الحساب.");
     }
 }
 

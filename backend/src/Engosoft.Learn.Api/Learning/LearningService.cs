@@ -50,7 +50,7 @@ public sealed partial class LearningService(
         {
             entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(60);
             var map = new Dictionary<int, EventAccess>();
-            if (user.Kind == UserKind.Student)
+            // Everyone sees the courses they are registered in; staff also see the ones they teach (teaching wins).
             {
                 var regs = await odoo.SearchReadAsync("event.registration",
                     D(("partner_id", "=", user.PartnerId), ("state", "in", new[] { "open", "done" })),
@@ -66,7 +66,7 @@ public sealed partial class LearningService(
                         map[ev.Id] = access;
                 }
             }
-            else
+            if (user.IsStaff)
             {
                 var employees = await odoo.SearchReadAsync("hr.employee", D(("user_id", "=", user.Uid)), ["id"], includeArchived: true, ct: ct);
                 var empIds = employees.Select(e => e.Id()).ToArray();
@@ -582,9 +582,7 @@ public sealed partial class LearningService(
     {
         var liveTask = BuildLiveAsync(user, ct);
         var recordedTask = GetRecordedCoursesAsync(user, ct);
-        var certTask = user.Kind == UserKind.Student
-            ? odoo.SearchCountAsync("lms.certificate", D(("partner_id", "=", user.PartnerId), ("state", "in", new[] { "generated", "sent" })), ct)
-            : Task.FromResult(0);
+        var certTask = odoo.SearchCountAsync("lms.certificate", D(("partner_id", "=", user.PartnerId), ("state", "in", new[] { "generated", "sent" })), ct);
         await Task.WhenAll(liveTask, recordedTask, certTask);
 
         var (cards, sessions) = liveTask.Result;
