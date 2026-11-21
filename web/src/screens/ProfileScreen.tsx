@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Award, BellRing, ChevronLeft, Globe, LogOut, Moon, Palette, Send, ShoppingBag, Smartphone } from 'lucide-react'
+import { Award, BellRing, ChevronLeft, Globe, LogOut, Moon, Palette, Send, ShieldCheck, ShoppingBag, Smartphone } from 'lucide-react'
 import { ApiError, api } from '../lib/api'
 import { useAuth } from '../lib/auth'
 import { useI18n } from '../lib/i18n'
@@ -45,8 +45,8 @@ export function ProfileScreen() {
   return (
     <div className="mx-auto max-w-6xl">
       <TopBar title={t('profile')} />
-      <div className="grid gap-5 px-4 py-4 md:px-8 md:py-6 lg:grid-cols-[340px_minmax(0,1fr)] lg:items-start lg:gap-8">
-        <div className="space-y-5 lg:sticky lg:top-24">
+      <div className="grid grid-cols-1 gap-5 px-4 py-4 md:px-8 md:py-6 lg:grid-cols-[340px_minmax(0,1fr)] lg:items-start lg:gap-8">
+        <div className="min-w-0 space-y-5 lg:sticky lg:top-24">
         <div className="card flex items-center gap-4 p-4">
           <Avatar partnerId={user?.partnerId} name={user?.name ?? ''} size={60} />
           <div className="min-w-0 flex-1">
@@ -60,6 +60,14 @@ export function ProfileScreen() {
           </div>
         </div>
 
+        {user?.kind === 'admin' && (
+          <Link to="/admin" className="card flex items-center gap-3 p-4">
+            <span className="grid h-11 w-11 place-items-center rounded-2xl bg-brand-500 text-white"><ShieldCheck className="h-5 w-5" /></span>
+            <span className="flex-1 font-bold">{lang === 'ar' ? 'لوحة الإدارة' : 'Admin'}</span>
+            <ChevronLeft className="h-5 w-5 text-muted ltr:rotate-180" />
+          </Link>
+        )}
+
         <Link to="/certificates" className="card flex items-center gap-3 p-4">
           <span className="grid h-11 w-11 place-items-center rounded-2xl bg-gold/15 text-[#B7791F]"><Award className="h-5 w-5" /></span>
           <span className="flex-1 font-bold">{t('certificates')}</span>
@@ -67,7 +75,7 @@ export function ProfileScreen() {
         </Link>
         </div>
 
-        <div className="space-y-5">
+        <div className="min-w-0 space-y-5">
         <section className="card divide-y divide-line/70">
           <h2 className="px-4 pb-2 pt-4 text-sm font-bold text-muted">{t('notificationsSettings')}</h2>
           <div className="flex items-center gap-3 px-4 py-3">

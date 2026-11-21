@@ -85,13 +85,13 @@ export function HomeScreen() {
           ) : null}
         </div>
 
-        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
           <div className="min-w-0 space-y-8">
             {pending.data && pending.data.length > 0 && (
               <Reveal>
                 <section>
                   <h2 className="section-title mb-3 flex items-center gap-2"><ClipboardCheck className="h-5 w-5 text-accent" />{t('pendingWork')}</h2>
-                  <Stagger className="grid gap-3 sm:grid-cols-2">
+                  <Stagger className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     {pending.data.map((a) => (
                       <StaggerItem key={a.id}>
                         <Link to={`/assessments/${a.id}`} className="card lift group flex items-center gap-3 overflow-hidden p-3">
@@ -154,7 +154,7 @@ export function HomeScreen() {
                     <h2 className="section-title">{t('myLiveCourses')}</h2>
                     <Link to="/courses?tab=live" className="text-sm font-bold text-accent hover:underline">{t('seeAll')}</Link>
                   </div>
-                  <Stagger className="grid gap-3 md:grid-cols-2 md:gap-5 xl:grid-cols-3">
+                  <Stagger className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-5 xl:grid-cols-3">
                     {data.liveCourses.slice(0, 6).map((c) => <StaggerItem key={c.eventId}><LiveCourseItem c={c} /></StaggerItem>)}
                   </Stagger>
                 </section>

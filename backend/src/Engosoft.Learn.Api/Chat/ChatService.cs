@@ -303,6 +303,19 @@ public sealed class ChatService(
         return await BroadcastUpdateAsync(msg.Id, ct);
     }
 
+    /// <summary>Admin page: delete a reported message even without being in the group.</summary>
+    public async Task AdminDeleteAsync(int adminPartnerId, long messageId, CancellationToken ct)
+    {
+        var msg = await db.Messages.SingleOrDefaultAsync(x => x.Id == messageId, ct);
+        if (msg is null || msg.DeletedAt is not null) return;
+        msg.DeletedAt = Now;
+        msg.DeletedBy = adminPartnerId;
+        msg.IsPinned = false;
+        db.Audit.Add(new ChatAudit { RoomId = msg.RoomId, ActorPartnerId = adminPartnerId, Action = "message_deleted", TargetPartnerId = msg.SenderPartnerId, Details = $"message {msg.Id} (admin)", At = Now });
+        await db.SaveChangesAsync(ct);
+        await BroadcastUpdateAsync(msg.Id, ct);
+    }
+
     public async Task<Result<MessageDto>> SetFlagAsync(CurrentUser user, long messageId, string flag, bool value, CancellationToken ct)
     {
         var (msg, member, error) = await MessageForAsync(user, messageId, ct);

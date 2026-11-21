@@ -24,6 +24,7 @@ const ChatRoomScreen = lazy(() => import('./screens/ChatRoomScreen').then((m) =>
 const NotificationsScreen = lazy(() => import('./screens/NotificationsScreen').then((m) => ({ default: m.NotificationsScreen })))
 const ProfileScreen = lazy(() => import('./screens/ProfileScreen').then((m) => ({ default: m.ProfileScreen })))
 const CertificatesScreen = lazy(() => import('./screens/CertificatesScreen').then((m) => ({ default: m.CertificatesScreen })))
+const AdminScreen = lazy(() => import('./screens/AdminScreen').then((m) => ({ default: m.AdminScreen })))
 const AssessmentScreen = lazy(() => import('./screens/AssessmentScreen').then((m) => ({ default: m.AssessmentScreen })))
 
 const queryClient = new QueryClient({
@@ -96,6 +97,7 @@ const router = createBrowserRouter([
           { path: '/notifications', element: <NotificationsScreen /> },
           { path: '/profile', element: <ProfileScreen /> },
           { path: '/certificates', element: <CertificatesScreen /> },
+          { path: '/admin', element: <AdminScreen /> },
           { path: '*', element: <Navigate to="/" replace /> },
         ],
       },

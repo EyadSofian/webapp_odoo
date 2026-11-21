@@ -2,7 +2,7 @@ import { Suspense, useEffect } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import clsx from 'clsx'
-import { Bell, BookOpen, ExternalLink, Home, MessagesSquare, Moon, Sun, UserRound } from 'lucide-react'
+import { Bell, BookOpen, ExternalLink, Home, MessagesSquare, Moon, ShieldCheck, Sun, UserRound } from 'lucide-react'
 import { api } from '../lib/api'
 import { useAuth } from '../lib/auth'
 import { ensureHub, onHub } from '../lib/hub'
@@ -109,6 +109,14 @@ function SideNav({ badges }: { badges?: Badges }) {
           )
         })}
       </nav>
+
+      {user?.kind === 'admin' && (
+        <NavLink to="/admin"
+          className={({ isActive }) => clsx('mx-3 mt-4 flex h-11 items-center gap-3 rounded-xl border px-3 text-[15px] font-semibold transition-colors',
+            isActive ? 'border-brand-500 bg-brand-500 text-white' : 'border-line text-ink hover:bg-sunken')}>
+          <ShieldCheck className="h-5 w-5" />{lang === 'ar' ? 'لوحة الإدارة' : 'Admin'}
+        </NavLink>
+      )}
 
       <a href="https://engosoft.com" target="_blank" rel="noreferrer"
         className="mx-3 mt-6 flex items-center gap-3 rounded-xl border border-line px-3 py-3 text-[13px] text-muted transition-colors hover:bg-sunken hover:text-ink">

@@ -40,7 +40,7 @@ public sealed record SessionUser(int PartnerId, string Name, string Kind, string
 public sealed record TokenResponse(string AccessToken, DateTime ExpiresAt, string RefreshToken, SessionUser User);
 
 /// <summary>Decides whether an Odoo user may use the app, and as what.</summary>
-public sealed class IdentityResolver(IOdooClient odoo, IOptions<AuthOptions> auth)
+public sealed class IdentityResolver(IOdooClient odoo, Admin.AdminDirectory admins)
 {
     public async Task<Result<(CurrentUser User, string? Email, string Lang)>> ResolveAsync(int uid, CancellationToken ct)
     {
@@ -57,7 +57,7 @@ public sealed class IdentityResolver(IOdooClient odoo, IOptions<AuthOptions> aut
         if (u.Bool("share"))
             return (new CurrentUser(uid, partner.Id, name, UserKind.Student), email, lang);
 
-        if (auth.Value.AdminPartnerIds.Contains(partner.Id))
+        if (await admins.IsAdminAsync(partner.Id, ct))
             return (new CurrentUser(uid, partner.Id, name, UserKind.Admin), email, lang);
 
         var isInstructor = await odoo.SearchCountAsync("hr.employee", D(("user_id", "=", uid), ("is_instructor", "=", true)), ct) > 0;

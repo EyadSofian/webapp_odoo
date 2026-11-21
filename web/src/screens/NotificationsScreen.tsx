@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import clsx from 'clsx'
-import { Bell, CalendarClock, CheckCheck, FileText, Flag, PlayCircle, Video } from 'lucide-react'
+import { Bell, CalendarClock, CheckCheck, FileText, Flag, Megaphone, PlayCircle, Video } from 'lucide-react'
 import { api } from '../lib/api'
 import { useI18n } from '../lib/i18n'
 import { chatTime } from '../lib/format'
@@ -15,6 +15,7 @@ function iconFor(kind: string) {
   if (kind === 'recording_ready') return { Icon: PlayCircle, tone: 'bg-ok/10 text-ok' }
   if (kind === 'document_added') return { Icon: FileText, tone: 'bg-gold/15 text-[#B7791F]' }
   if (kind === 'chat_report') return { Icon: Flag, tone: 'bg-warn/10 text-warn' }
+  if (kind === 'announcement') return { Icon: Megaphone, tone: 'bg-brand-500 text-white' }
   return { Icon: Bell, tone: 'bg-sunken text-muted' }
 }
 

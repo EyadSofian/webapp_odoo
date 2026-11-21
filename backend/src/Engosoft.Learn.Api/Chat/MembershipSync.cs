@@ -157,7 +157,7 @@ public sealed class MembershipSync(
                 }
                 m.DisplayName = want.Name;
             }
-            else if (m.RemovedAt is null)
+            else if (m.RemovedAt is null && m.Role != MemberRole.Admin)
             {
                 m.RemovedAt = now;
                 m.RemovedReason = m.Role == MemberRole.Student ? "seat_ended" : "left_team";

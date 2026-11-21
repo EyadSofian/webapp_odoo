@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
+using Engosoft.Learn.Api.Admin;
 using Engosoft.Learn.Api.Assessments;
 using Engosoft.Learn.Api.Auth;
 using Engosoft.Learn.Api.Chat;
@@ -57,6 +58,7 @@ services.AddLearningModule();
 services.AddChatModule();
 services.AddNotificationsModule();
 services.AddAssessmentsModule();
+services.AddAdminModule();
 services.AddSignalR().AddJsonProtocol(o =>
     o.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)));
 
@@ -108,6 +110,17 @@ if (app.Configuration.GetValue("Database:AutoMigrate", true))
     await scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.MigrateAsync();
 }
 
+// Chat rules changed from the admin page override the configured ones.
+await using (var scope = app.Services.CreateAsyncScope())
+{
+    try
+    {
+        await ChatSettingsStore.ApplySavedAsync(scope.ServiceProvider.GetRequiredService<AppDbContext>(),
+            scope.ServiceProvider.GetRequiredService<IOptions<Engosoft.Learn.Api.Chat.ChatOptions>>().Value, CancellationToken.None);
+    }
+    catch (Exception ex) { app.Logger.LogWarning(ex, "Could not load saved chat settings; using the configured ones"); }
+}
+
 app.UseForwardedHeaders();
 app.Use((http, next) =>
 {
@@ -136,6 +149,7 @@ app.MapLearningEndpoints();
 app.MapChatEndpoints();
 app.MapNotificationEndpoints();
 app.MapAssessmentEndpoints();
+app.MapAdminEndpoints();
 
 // The built web app (web/dist) can be served from wwwroot, so one deployment serves app and API.
 if (Directory.Exists(Path.Combine(app.Environment.ContentRootPath, "wwwroot")))

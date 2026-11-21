@@ -67,7 +67,7 @@ export function RecordedCourseScreen() {
             ) : c.expired ? <a className="btn-soft h-11 px-5" href="https://engosoft.com" target="_blank" rel="noreferrer">{t('renew')}</a> : undefined}
           />
 
-          <div className="grid gap-6 px-4 py-5 md:px-8 md:py-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-8">
+          <div className="grid grid-cols-1 gap-6 px-4 py-5 md:px-8 md:py-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-8">
             <aside className="space-y-4 lg:order-last lg:sticky lg:top-24 lg:self-start">
               {nextLesson && !c.expired && (
                 <Link to={`/lessons/${nextLesson.id}`} className="card lift group block p-4">

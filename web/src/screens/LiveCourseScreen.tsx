@@ -83,7 +83,7 @@ export function LiveCourseScreen() {
             )}
           />
 
-          <div className="grid gap-6 px-4 py-5 md:px-8 md:py-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-8">
+          <div className="grid grid-cols-1 gap-6 px-4 py-5 md:px-8 md:py-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-8">
             <div className="min-w-0 space-y-6">
               <Reveal>
                 <section>
@@ -176,7 +176,7 @@ function AssessmentsSection({ eventId, staff, ended }: { eventId: number; staff:
         </div>
         {isLoading && <Skeleton className="h-24 w-full" />}
         {data && data.length === 0 && <div className="card p-6 text-center text-sm text-muted">{t('noAssessments')}</div>}
-        <Stagger className="grid gap-3 sm:grid-cols-2">
+        <Stagger className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {data?.map((a) => (
             <StaggerItem key={a.id}>
               <Link to={`/assessments/${a.id}`} className="card lift group block p-4">

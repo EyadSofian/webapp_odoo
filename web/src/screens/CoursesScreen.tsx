@@ -40,11 +40,11 @@ export function CoursesScreen() {
             ? <EmptyState icon={<CalendarDays className="h-7 w-7" />} title={t('liveCourses')} body={t('chatsEmpty')} />
             : (
               <div className="space-y-6">
-                <div className="grid gap-3 md:grid-cols-2 md:gap-5 lg:grid-cols-3 2xl:grid-cols-4">{active.map((c) => <LiveCourseItem key={c.eventId} c={c} />)}</div>
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-5 lg:grid-cols-3 2xl:grid-cols-4">{active.map((c) => <LiveCourseItem key={c.eventId} c={c} />)}</div>
                 {expired.length > 0 && (
                   <section>
                     <h2 className="mb-3 text-sm font-bold text-muted md:text-base">{t('expired')}</h2>
-                    <div className="grid gap-3 md:grid-cols-2 md:gap-5 lg:grid-cols-3 2xl:grid-cols-4">{expired.map((c) => <LiveCourseItem key={c.eventId} c={c} />)}</div>
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-5 lg:grid-cols-3 2xl:grid-cols-4">{expired.map((c) => <LiveCourseItem key={c.eventId} c={c} />)}</div>
                   </section>
                 )}
               </div>
