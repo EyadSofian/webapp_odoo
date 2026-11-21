@@ -28,7 +28,7 @@ function apply(choice: ThemeChoice) {
 function setBarColor() {
   if (document.getElementById('splash')) return
   const dark = document.documentElement.dataset.theme === 'dark'
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#08111C' : '#F5F6F8')
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#08111C' : '#F4F7FC')
 }
 if (typeof window !== 'undefined') (window as unknown as { setBarColor?: () => void }).setBarColor = setBarColor
 

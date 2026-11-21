@@ -32,30 +32,26 @@ export function HomeScreen() {
 
   return (
     <div className="mx-auto max-w-[1280px] md:px-8 md:pt-8">
-      {/* Greeting: drafting-paper header with Engineer Majed telling you what is next */}
-      <section className="relative overflow-hidden pt-safe md:rounded-[24px] md:border md:border-line md:bg-surface md:shadow-card">
-        <div aria-hidden className="pointer-events-none absolute inset-0 [background-image:linear-gradient(rgb(var(--brand-500)/0.08)_1px,transparent_1px),linear-gradient(90deg,rgb(var(--brand-500)/0.08)_1px,transparent_1px)] [background-size:28px_28px] [mask-image:linear-gradient(to_bottom,black,transparent_95%)]" />
+      {/* Greeting band in the website's deep navy, the page's one dark block */}
+      <section className="relative overflow-hidden bg-[#001D35] pt-safe text-white md:rounded-[24px]">
+        <div aria-hidden className="pointer-events-none absolute inset-0 [background-image:linear-gradient(rgb(255_255_255/0.05)_1px,transparent_1px),linear-gradient(90deg,rgb(255_255_255/0.05)_1px,transparent_1px)] [background-size:32px_32px] [mask-image:linear-gradient(to_left,black,transparent_85%)] ltr:[mask-image:linear-gradient(to_right,black,transparent_85%)]" />
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-l from-[#1B57D6] via-[#1B57D6]/40 to-transparent" />
         <div className="relative flex h-14 items-center justify-between px-4 md:hidden">
-          <Logo className="h-8 w-auto" />
-          <Link to="/notifications" className="relative grid h-10 w-10 place-items-center rounded-full border border-line bg-surface text-ink shadow-card" aria-label={t('notifications')}>
+          <Logo variant="white" className="h-8 w-auto" />
+          <Link to="/notifications" className="relative grid h-10 w-10 place-items-center rounded-full bg-white/10 text-white" aria-label={t('notifications')}>
             <Bell className="h-5 w-5" />
-            {!!badges?.notifications && <span className="absolute end-2 top-2 h-2.5 w-2.5 rounded-full bg-live ring-2 ring-surface" />}
+            {!!badges?.notifications && <span className="absolute end-2 top-2 h-2.5 w-2.5 rounded-full bg-live ring-2 ring-[#001D35]" />}
           </Link>
         </div>
-        <div className="relative grid gap-6 px-5 pb-6 pt-4 md:grid-cols-[minmax(0,1fr)_minmax(0,420px)] md:items-center md:gap-10 md:p-10">
+        <div className="relative grid gap-6 px-5 pb-20 pt-4 md:grid-cols-[minmax(0,1fr)_minmax(0,420px)] md:items-center md:gap-10 md:p-10">
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.45 }}>
-            <p className="text-sm font-medium text-muted md:text-base">{greeting(t)}{firstName ? '،' : ''}</p>
-            <h1 className="mt-1 font-display text-[30px] font-bold leading-tight md:text-[46px]">{isLoading ? <span className="inline-block h-9 w-48 rounded-lg bg-sunken" /> : firstName || t('hello')}</h1>
-            <div className="mt-5 flex items-end gap-2.5">
-              <span className="h-11 w-11 shrink-0 overflow-hidden rounded-full bg-brand-50 ring-2 ring-surface shadow-card">
-                <img src="/art/majed.webp" alt="" className="h-[150%] w-full object-cover object-top" />
-              </span>
-              <p className="max-w-md rounded-[18px] rounded-es-[6px] border border-line bg-surface px-4 py-2.5 text-[14px] leading-6 text-ink shadow-card md:text-[15px]">
-                {data?.nextSession
-                  ? (lang === 'ar' ? `محاضرتك القادمة ${relativeDay(data.nextSession.start!, lang)}. يُتاح الدخول قبل موعدها بربع ساعة.` : `Your next session is ${relativeDay(data.nextSession.start!, lang)}. You can join 15 minutes before it starts.`)
-                  : (lang === 'ar' ? 'تابع دوراتك من حيث توقفت.' : 'Pick up where you left off.')}
-              </p>
-            </div>
+            <p className="text-sm font-medium text-white/65 md:text-base">{greeting(t)}{firstName ? '،' : ''}</p>
+            <h1 className="mt-1 font-display text-[30px] font-bold leading-tight md:text-[46px]">{isLoading ? <span className="inline-block h-9 w-48 rounded-lg bg-white/10" /> : firstName || t('hello')}</h1>
+            <p className="mt-3 max-w-md text-[14px] leading-6 text-white/75 md:text-base md:leading-7">
+              {data?.nextSession
+                ? (lang === 'ar' ? `محاضرتك القادمة ${relativeDay(data.nextSession.start!, lang)}. يُتاح الدخول قبل موعدها بربع ساعة.` : `Your next session is ${relativeDay(data.nextSession.start!, lang)}. You can join 15 minutes before it starts.`)
+                : (lang === 'ar' ? 'تابع دوراتك من حيث توقفت.' : 'Pick up where you left off.')}
+            </p>
           </motion.div>
           <div className="hidden md:block">
             {data?.nextSession && <NextSessionCard session={data.nextSession} instructor={nextCourse?.instructor?.name} channelId={nextCourse?.courseChannelId} />}
@@ -63,7 +59,7 @@ export function HomeScreen() {
         </div>
       </section>
 
-      <div className="relative space-y-8 px-4 md:mt-8 md:px-0">
+      <div className="relative -mt-14 space-y-8 px-4 md:mt-8 md:px-0">
         {error ? <ErrorState error={error} onRetry={() => refetch()} /> : null}
 
         <div className="md:hidden">
