@@ -8,6 +8,9 @@ backend/src/Engosoft.Learn.Api/wwwroot/
 # Web
 web/node_modules/
 web/dist/
+
+# Railway IaC SDK (root package.json)
+/node_modules/
 web/dev-dist/
 
 # Local
