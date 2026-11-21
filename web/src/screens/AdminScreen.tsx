@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import clsx from 'clsx'
 import {
-  Bell, Check, Flag, History, Loader2, Lock, LogIn, MessagesSquare, Plus, Search, Send, Settings2, ShieldCheck, Trash2, Users, X,
+  Ban, CalendarClock, Check, ExternalLink, Flag, History, Loader2, Lock, LogIn, Megaphone, MessagesSquare, MousePointerClick, Plus, Search, Send, Settings2, ShieldCheck, Trash2, Users, X,
 } from 'lucide-react'
 import { ApiError, api } from '../lib/api'
 import { useAuth } from '../lib/auth'
@@ -22,10 +22,10 @@ interface Report { id: string; roomId: string; messageId: number; reason: string
 interface AuditRow { id: number; action: string; details: string | null; at: string; room: string | null; actor: string | null; target: string | null }
 interface ChatSettings { studentsCanUpload: boolean; maxAttachmentMb: number; readOnlyAfterDays: number; burstMessages: number }
 
-type Tab = 'users' | 'groups' | 'reports' | 'settings' | 'broadcast'
+type Tab = 'users' | 'groups' | 'reports' | 'settings' | 'campaigns'
 
 const AR = {
-  title: 'لوحة الإدارة', users: 'المستخدمون', groups: 'المجموعات', reports: 'البلاغات', settings: 'الإعدادات', broadcast: 'إشعار جماعي',
+  title: 'لوحة الإدارة', users: 'المستخدمون', groups: 'المجموعات', reports: 'البلاغات', settings: 'الإعدادات', campaigns: 'الحملات',
   kUsers: 'مستخدمو التطبيق', kActive: 'نشطون خلال 7 أيام', kRooms: 'مجموعات الدورات', kReports: 'بلاغات مفتوحة', kPush: 'أجهزة الإشعارات',
   admins: 'مسؤولو الإدارة', addAdmin: 'إضافة مسؤول', searchStaff: 'ابحث عن موظف بالاسم أو البريد', fixed: 'من إعدادات الخادم', remove: 'إزالة',
   search: 'بحث', lastSeen: 'آخر دخول', sessions: 'جلسات', devices: 'أجهزة', noUsers: 'لا يوجد مستخدمون بعد',
@@ -39,9 +39,17 @@ const AR = {
   audience: 'المستلمون', everyone: 'كل مستخدمي التطبيق', oneCourse: 'أعضاء دورة واحدة', chooseCourse: 'اختر الدورة', nTitle: 'العنوان', nBody: 'نص الإشعار',
   preview: 'معاينة', confirm: 'أؤكد إرسال هذا الإشعار', send: 'إرسال', sentTo: (n: number) => `أُرسل الإشعار إلى ${n} مستخدم`,
   everyoneHint: 'يصل إلى كل من سجّل الدخول إلى التطبيق خلال آخر 30 يومًا، في الإشعارات وعلى أجهزتهم.',
+  newCampaign: 'حملة جديدة', history: 'الحملات السابقة', noCampaigns: 'لم تُرسل أي حملة بعد',
+  liveCourses: 'دورات مباشرة', recordedCourses: 'دورات مسجّلة', whoInCourse: 'من داخل الدورة', allMembers: 'الكل', learnersOnly: 'المتدربون فقط', teamOnly: 'فريق الدورة فقط',
+  searchCourses: 'ابحث عن دورة', selected: 'المختارة', recipients: 'المستلمون', link: 'زر داخل الإشعار (اختياري)', linkNone: 'بدون',
+  linkApp: 'صفحة في التطبيق', linkWeb: 'رابط خارجي', linkPlaceholderApp: 'مثال: /courses', linkPlaceholderWeb: 'https://engosoft.com/…', linkLabel: 'نص الزر',
+  when: 'موعد الإرسال', now: 'الآن', later: 'في موعد محدد', scheduleAt: 'التاريخ والوقت', schedule: 'جدولة', sendNow: 'إرسال الآن',
+  st_scheduled: 'مجدولة', st_sending: 'جارٍ الإرسال', st_sent: 'أُرسلت', st_cancelled: 'أُلغيت', st_failed: 'فشلت',
+  cancel: 'إلغاء الحملة', reached: 'وصلت إلى', taps: 'نقرة', by: 'بواسطة', scheduledFor: 'موعدها',
+  appOnlyNote: 'تصل الحملة إلى من يستخدم التطبيق فقط، في صندوق الإشعارات وعلى الهاتف.', scheduledOk: 'جُدولت الحملة', sentOk: (n: number) => `بدأ إرسال الحملة إلى ${n} مستخدم`,
 }
 const EN: typeof AR = {
-  title: 'Admin', users: 'Users', groups: 'Groups', reports: 'Reports', settings: 'Settings', broadcast: 'Broadcast',
+  title: 'Admin', users: 'Users', groups: 'Groups', reports: 'Reports', settings: 'Settings', campaigns: 'Campaigns',
   kUsers: 'App users', kActive: 'Active in 7 days', kRooms: 'Course groups', kReports: 'Open reports', kPush: 'Push devices',
   admins: 'Admins', addAdmin: 'Add admin', searchStaff: 'Search staff by name or email', fixed: 'Server setting', remove: 'Remove',
   search: 'Search', lastSeen: 'Last seen', sessions: 'sessions', devices: 'devices', noUsers: 'No users yet',
@@ -55,6 +63,14 @@ const EN: typeof AR = {
   audience: 'Audience', everyone: 'Everyone in the app', oneCourse: 'Members of one course', chooseCourse: 'Choose a course', nTitle: 'Title', nBody: 'Message',
   preview: 'Preview', confirm: 'I confirm sending this notification', send: 'Send', sentTo: (n: number) => `Sent to ${n} people`,
   everyoneHint: 'Reaches everyone signed in to the app in the last 30 days, in their inbox and on their devices.',
+  newCampaign: 'New campaign', history: 'Past campaigns', noCampaigns: 'No campaigns yet',
+  liveCourses: 'Live courses', recordedCourses: 'Recorded courses', whoInCourse: 'Who in the course', allMembers: 'Everyone', learnersOnly: 'Learners only', teamOnly: 'Course team only',
+  searchCourses: 'Search courses', selected: 'Selected', recipients: 'Recipients', link: 'Button in the notification (optional)', linkNone: 'None',
+  linkApp: 'App page', linkWeb: 'Outside link', linkPlaceholderApp: 'e.g. /courses', linkPlaceholderWeb: 'https://engosoft.com/…', linkLabel: 'Button text',
+  when: 'When', now: 'Now', later: 'At a set time', scheduleAt: 'Date and time', schedule: 'Schedule', sendNow: 'Send now',
+  st_scheduled: 'Scheduled', st_sending: 'Sending', st_sent: 'Sent', st_cancelled: 'Cancelled', st_failed: 'Failed',
+  cancel: 'Cancel', reached: 'Reached', taps: 'taps', by: 'by', scheduledFor: 'Scheduled for',
+  appOnlyNote: 'Campaigns reach people who use the app, in their inbox and on their phone.', scheduledOk: 'Campaign scheduled', sentOk: (n: number) => `Sending to ${n} people`,
 }
 
 const ACTIONS_AR: Record<string, string> = {
@@ -62,7 +78,7 @@ const ACTIONS_AR: Record<string, string> = {
   question_opened: 'فتح سؤال خاص', message_deleted: 'حذف رسالة', message_reported: 'إبلاغ عن رسالة', pin_set: 'تثبيت رسالة', pin_cleared: 'إلغاء تثبيت',
   answer_set: 'اعتماد إجابة', answer_cleared: 'إلغاء اعتماد', announcement_on: 'تفعيل وضع الإعلانات', announcement_off: 'إيقاف وضع الإعلانات', slow_mode: 'الوضع البطيء',
   member_muted: 'كتم عضو', member_unmuted: 'إلغاء كتم', admin_added: 'إضافة مسؤول', admin_removed: 'إزالة مسؤول', admin_joined: 'دخول مسؤول كمشرف',
-  report_message_deleted: 'حذف رسالة مُبلّغ عنها', report_dismissed: 'تجاهل بلاغ', settings_changed: 'تغيير الإعدادات', broadcast_sent: 'إرسال إشعار جماعي',
+  report_message_deleted: 'حذف رسالة مُبلّغ عنها', report_dismissed: 'تجاهل بلاغ', settings_changed: 'تغيير الإعدادات', broadcast_sent: 'إرسال إشعار جماعي', campaign_sent: 'إرسال حملة',
 }
 
 function useL() {
@@ -77,7 +93,7 @@ const errText = (e: unknown) => (e instanceof ApiError ? e.message : String(e))
 export function AdminScreen() {
   const L = useL()
   const [params, setParams] = useSearchParams()
-  const tab = (['users', 'groups', 'reports', 'settings', 'broadcast'].includes(params.get('tab') ?? '') ? params.get('tab') : 'users') as Tab
+  const tab = (['users', 'groups', 'reports', 'settings', 'campaigns'].includes(params.get('tab') ?? '') ? params.get('tab') : 'users') as Tab
   const overview = useQuery({ queryKey: ['admin', 'overview'], queryFn: () => api<Overview>('/api/admin/overview') })
 
   const tabs: { id: Tab; label: string; icon: typeof Users; badge?: number }[] = [
@@ -85,7 +101,7 @@ export function AdminScreen() {
     { id: 'groups', label: L.groups, icon: MessagesSquare },
     { id: 'reports', label: L.reports, icon: Flag, badge: overview.data?.openReports },
     { id: 'settings', label: L.settings, icon: Settings2 },
-    { id: 'broadcast', label: L.broadcast, icon: Bell },
+    { id: 'campaigns', label: L.campaigns, icon: Megaphone },
   ]
 
   if (overview.error instanceof ApiError && overview.error.status === 403) {
@@ -134,7 +150,7 @@ export function AdminScreen() {
         {tab === 'groups' && <GroupsTab />}
         {tab === 'reports' && <ReportsTab />}
         {tab === 'settings' && <SettingsTab />}
-        {tab === 'broadcast' && <BroadcastTab />}
+        {tab === 'campaigns' && <CampaignsTab />}
       </div>
     </div>
   )
@@ -410,73 +426,263 @@ function SettingsTab() {
   )
 }
 
-// ------------------------------------------------------------------ broadcast
+// ------------------------------------------------------------------ campaigns
 
-function BroadcastTab() {
+interface CampaignRow {
+  id: string; title: string; body: string; linkUrl: string | null; linkLabel: string | null; audienceSummary: string
+  status: 'scheduled' | 'sending' | 'sent' | 'cancelled' | 'failed'; scheduledAt: string; sentAt: string | null
+  recipients: number; clicks: number; createdByName: string; error: string | null
+}
+interface RecordedHit { channelId: number; name: string; members: number }
+type AudienceKind = 'all' | 'live' | 'recorded'
+
+function CampaignsTab() {
   const L = useL()
+  const { lang } = useI18n()
   const toast = useToast()
+  const qc = useQueryClient()
+  const campaigns = useQuery({ queryKey: ['admin', 'campaigns'], queryFn: () => api<CampaignRow[]>('/api/admin/campaigns'), refetchInterval: 15_000 })
   const rooms = useQuery({ queryKey: ['admin', 'rooms'], queryFn: () => api<AdminRoom[]>('/api/admin/rooms') })
-  const [audience, setAudience] = useState<'all' | 'course'>('all')
-  const [eventId, setEventId] = useState<number | ''>('')
+
+  const [kind, setKind] = useState<AudienceKind>('all')
+  const [eventIds, setEventIds] = useState<number[]>([])
+  const [channels, setChannels] = useState<RecordedHit[]>([])
+  const [roles, setRoles] = useState<'all' | 'learners' | 'team'>('all')
+  const [courseQ, setCourseQ] = useState('')
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
+  const [linkKind, setLinkKind] = useState<'none' | 'app' | 'web'>('none')
+  const [linkUrl, setLinkUrl] = useState('')
+  const [linkLabel, setLinkLabel] = useState('')
+  const [later, setLater] = useState(false)
+  const [at, setAt] = useState('')
   const [sure, setSure] = useState(false)
-  const course = rooms.data?.find((r) => r.eventId === eventId)
-  const send = useMutation({
-    mutationFn: () => api<{ sent: number }>('/api/admin/broadcast', { method: 'POST', json: { title, body, audience, eventId: audience === 'course' ? eventId : null } }),
-    onSuccess: ({ sent }) => { toast({ kind: 'ok', text: L.sentTo(sent) }); setTitle(''); setBody(''); setSure(false) },
+
+  const audience = { kind, eventIds: kind === 'live' ? eventIds : null, channelIds: kind === 'recorded' ? channels.map((c) => c.channelId) : null, roles: kind === 'live' ? roles : null }
+  const audienceKey = JSON.stringify(audience)
+  const audienceReady = kind === 'all' || (kind === 'live' && eventIds.length > 0) || (kind === 'recorded' && channels.length > 0)
+  const preview = useQuery({
+    queryKey: ['admin', 'campaign-preview', audienceKey],
+    queryFn: () => api<{ count: number; summary: string }>('/api/admin/campaigns/preview', { method: 'POST', json: audience }),
+    enabled: audienceReady,
+  })
+  const recordedHits = useQuery({
+    queryKey: ['admin', 'recorded', courseQ],
+    queryFn: () => api<RecordedHit[]>(`/api/admin/recorded-courses?q=${encodeURIComponent(courseQ.trim())}`),
+    enabled: kind === 'recorded',
+  })
+  const liveRooms = (rooms.data ?? []).filter((r) => r.eventId && r.status !== 'archived' && (!courseQ.trim() || `${r.title} ${r.code ?? ''}`.toLowerCase().includes(courseQ.trim().toLowerCase())))
+
+  const create = useMutation({
+    mutationFn: () => api<{ id: string; recipients: number; scheduled: boolean }>('/api/admin/campaigns', {
+      method: 'POST',
+      json: {
+        title, body, audience,
+        linkUrl: linkKind === 'none' ? null : linkUrl.trim(), linkLabel: linkKind === 'none' ? null : linkLabel.trim() || null,
+        scheduledAt: later && at ? new Date(at).toISOString() : null,
+      },
+    }),
+    onSuccess: (r) => {
+      toast({ kind: 'ok', text: r.scheduled ? L.scheduledOk : L.sentOk(r.recipients) })
+      setTitle(''); setBody(''); setSure(false); setLinkKind('none'); setLinkUrl(''); setLinkLabel(''); setLater(false); setAt('')
+      void qc.invalidateQueries({ queryKey: ['admin', 'campaigns'] })
+    },
     onError: (e) => toast({ kind: 'error', text: errText(e) }),
   })
-  const ready = title.trim().length >= 3 && body.trim().length >= 3 && (audience === 'all' || !!eventId) && sure
+  const cancel = useMutation({
+    mutationFn: (id: string) => api(`/api/admin/campaigns/${id}/cancel`, { method: 'POST' }),
+    onSuccess: () => { void qc.invalidateQueries({ queryKey: ['admin', 'campaigns'] }) },
+    onError: (e) => toast({ kind: 'error', text: errText(e) }),
+  })
+
+  const linkOk = linkKind === 'none' || (linkKind === 'app' ? /^\/(?!\/)/.test(linkUrl.trim()) : /^https:\/\/\S+/.test(linkUrl.trim()))
+  const ready = title.trim().length >= 3 && body.trim().length >= 3 && audienceReady && linkOk && (!later || !!at) && sure
+  const pill = (on: boolean) => clsx('h-9 rounded-full border px-4 text-sm font-semibold transition-colors', on ? 'border-brand-500 bg-brand-50 text-accent' : 'border-line hover:bg-sunken')
+  const statusTone: Record<CampaignRow['status'], string> = {
+    scheduled: 'bg-gold/15 text-[#8A5A0B]', sending: 'bg-brand-50 text-accent', sent: 'bg-ok/10 text-ok', cancelled: 'bg-sunken text-muted', failed: 'bg-live/10 text-live',
+  }
 
   return (
-    <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
-      <section className="card space-y-5 p-4 md:p-6">
-        <div>
-          <p className="mb-2 text-sm font-semibold">{L.audience}</p>
+    <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-start">
+      <section className="card space-y-6 p-4 md:p-6">
+        <h3 className="flex items-center gap-2 text-lg font-bold"><Megaphone className="h-5 w-5 text-accent" />{L.newCampaign}</h3>
+
+        {/* Audience */}
+        <div className="space-y-3">
+          <p className="text-sm font-semibold">{L.audience}</p>
           <div className="flex flex-wrap gap-2">
-            {([['all', L.everyone], ['course', L.oneCourse]] as const).map(([v, l]) => (
-              <button key={v} onClick={() => setAudience(v)}
-                className={clsx('h-10 rounded-full border px-4 text-sm font-semibold transition-colors', audience === v ? 'border-brand-500 bg-brand-50 text-accent' : 'border-line hover:bg-sunken')}>{l}</button>
+            {([['all', L.everyone], ['live', L.liveCourses], ['recorded', L.recordedCourses]] as const).map(([v, l]) => (
+              <button key={v} className={pill(kind === v)} onClick={() => { setKind(v); setCourseQ('') }}>{l}</button>
             ))}
           </div>
-          {audience === 'all' && <p className="mt-2 text-xs text-muted">{L.everyoneHint}</p>}
-          {audience === 'course' && (
-            <select className="field mt-3 h-11" value={eventId} onChange={(e) => setEventId(e.target.value ? Number(e.target.value) : '')}>
-              <option value="">{L.chooseCourse}</option>
-              {rooms.data?.filter((r) => r.eventId && r.status !== 'archived').map((r) => (
-                <option key={r.id} value={r.eventId!}>{r.title}{r.code ? ` · ${r.code}` : ''} ({r.members})</option>
-              ))}
-            </select>
+          {kind === 'all' && <p className="text-xs text-muted">{L.everyoneHint}</p>}
+
+          {kind !== 'all' && (
+            <div className="rounded-[14px] border border-line">
+              <div className="relative border-b border-line p-2">
+                <Search className="pointer-events-none absolute start-5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+                <input className="field h-10 border-transparent bg-sunken ps-9 text-sm" placeholder={L.searchCourses} value={courseQ} onChange={(e) => setCourseQ(e.target.value)} />
+              </div>
+              <ul className="max-h-60 overflow-y-auto py-1">
+                {kind === 'live' && liveRooms.map((r) => {
+                  const on = eventIds.includes(r.eventId!)
+                  return (
+                    <li key={r.id}>
+                      <label className="flex cursor-pointer items-center gap-3 px-3 py-2 text-sm hover:bg-sunken">
+                        <input type="checkbox" className="h-4 w-4 accent-[rgb(var(--brand-500))]" checked={on}
+                          onChange={() => setEventIds((ids) => on ? ids.filter((x) => x !== r.eventId) : [...ids, r.eventId!])} />
+                        <span className="min-w-0 flex-1 truncate" dir="auto">{r.title}</span>
+                        <span className="num shrink-0 text-xs text-muted">{r.code} · {r.members}</span>
+                      </label>
+                    </li>
+                  )
+                })}
+                {kind === 'recorded' && recordedHits.data?.map((c) => {
+                  const on = channels.some((x) => x.channelId === c.channelId)
+                  return (
+                    <li key={c.channelId}>
+                      <label className="flex cursor-pointer items-center gap-3 px-3 py-2 text-sm hover:bg-sunken">
+                        <input type="checkbox" className="h-4 w-4 accent-[rgb(var(--brand-500))]" checked={on}
+                          onChange={() => setChannels((xs) => on ? xs.filter((x) => x.channelId !== c.channelId) : [...xs, c])} />
+                        <span className="min-w-0 flex-1 truncate" dir="auto">{c.name}</span>
+                        <span className="num shrink-0 text-xs text-muted">{c.members}</span>
+                      </label>
+                    </li>
+                  )
+                })}
+                {(kind === 'recorded' ? recordedHits.isFetching : rooms.isLoading) && <li className="p-3"><Loader2 className="mx-auto h-5 w-5 animate-spin text-muted" /></li>}
+              </ul>
+              {(kind === 'recorded' ? channels.length : eventIds.length) > 0 && (
+                <div className="flex flex-wrap gap-1.5 border-t border-line p-2">
+                  {kind === 'recorded' && channels.map((c) => (
+                    <span key={c.channelId} className="chip h-7 max-w-full bg-brand-50 text-accent">
+                      <span className="truncate" dir="auto">{c.name}</span>
+                      <button onClick={() => setChannels((xs) => xs.filter((x) => x.channelId !== c.channelId))} aria-label={L.remove}><X className="h-3.5 w-3.5" /></button>
+                    </span>
+                  ))}
+                  {kind === 'live' && eventIds.map((id) => {
+                    const r = rooms.data?.find((x) => x.eventId === id)
+                    return (
+                      <span key={id} className="chip h-7 max-w-full bg-brand-50 text-accent">
+                        <span className="truncate" dir="auto">{r?.title ?? id}</span>
+                        <button onClick={() => setEventIds((xs) => xs.filter((x) => x !== id))} aria-label={L.remove}><X className="h-3.5 w-3.5" /></button>
+                      </span>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
           )}
+
+          {kind === 'live' && (
+            <div>
+              <p className="mb-2 text-xs font-semibold text-muted">{L.whoInCourse}</p>
+              <div className="flex flex-wrap gap-2">
+                {([['all', L.allMembers], ['learners', L.learnersOnly], ['team', L.teamOnly]] as const).map(([v, l]) => (
+                  <button key={v} className={pill(roles === v)} onClick={() => setRoles(v)}>{l}</button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {audienceReady && (
+            <p className="flex items-center gap-2 rounded-xl bg-sunken px-3 py-2 text-sm">
+              <Users className="h-4 w-4 text-accent" />{L.recipients}:
+              {preview.isFetching ? <Loader2 className="h-4 w-4 animate-spin" /> : <span className="num font-bold">{preview.data?.count ?? 0}</span>}
+            </p>
+          )}
+          <p className="text-xs text-muted">{L.appOnlyNote}</p>
         </div>
+
+        {/* Content */}
+        <div className="space-y-4">
+          <div>
+            <label className="mb-2 block text-sm font-semibold" htmlFor="c-title">{L.nTitle}</label>
+            <input id="c-title" className="field h-11" maxLength={120} value={title} onChange={(e) => setTitle(e.target.value)} dir="auto" />
+          </div>
+          <div>
+            <label className="mb-2 block text-sm font-semibold" htmlFor="c-body">{L.nBody}</label>
+            <textarea id="c-body" className="field min-h-[110px] py-3" maxLength={500} value={body} onChange={(e) => setBody(e.target.value)} dir="auto" />
+            <p className="num mt-1 text-end text-xs text-muted">{body.length}/500</p>
+          </div>
+          <div>
+            <p className="mb-2 text-sm font-semibold">{L.link}</p>
+            <div className="flex flex-wrap gap-2">
+              {([['none', L.linkNone], ['app', L.linkApp], ['web', L.linkWeb]] as const).map(([v, l]) => (
+                <button key={v} className={pill(linkKind === v)} onClick={() => setLinkKind(v)}>{l}</button>
+              ))}
+            </div>
+            {linkKind !== 'none' && (
+              <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_180px]">
+                <input className={clsx('field h-11', !linkOk && linkUrl && 'border-live')} dir="ltr" value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)}
+                  placeholder={linkKind === 'app' ? L.linkPlaceholderApp : L.linkPlaceholderWeb} />
+                <input className="field h-11" maxLength={40} value={linkLabel} onChange={(e) => setLinkLabel(e.target.value)} placeholder={L.linkLabel} dir="auto" />
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Timing */}
         <div>
-          <label className="mb-2 block text-sm font-semibold" htmlFor="b-title">{L.nTitle}</label>
-          <input id="b-title" className="field h-11" maxLength={120} value={title} onChange={(e) => setTitle(e.target.value)} dir="auto" />
+          <p className="mb-2 text-sm font-semibold">{L.when}</p>
+          <div className="flex flex-wrap gap-2">
+            <button className={pill(!later)} onClick={() => setLater(false)}>{L.now}</button>
+            <button className={pill(later)} onClick={() => setLater(true)}><CalendarClock className="me-1.5 inline h-4 w-4" />{L.later}</button>
+          </div>
+          {later && <input type="datetime-local" className="field mt-3 h-11 w-full sm:w-72" value={at} onChange={(e) => setAt(e.target.value)} dir="ltr" />}
         </div>
-        <div>
-          <label className="mb-2 block text-sm font-semibold" htmlFor="b-body">{L.nBody}</label>
-          <textarea id="b-body" className="field min-h-[120px] py-3" maxLength={500} value={body} onChange={(e) => setBody(e.target.value)} dir="auto" />
-          <p className="num mt-1 text-end text-xs text-muted">{body.length}/500</p>
-        </div>
+
         <label className="flex cursor-pointer items-center gap-3 text-sm">
           <input type="checkbox" className="h-5 w-5 accent-[rgb(var(--brand-500))]" checked={sure} onChange={(e) => setSure(e.target.checked)} />
-          {L.confirm}{audience === 'course' && course ? ` (${course.members} ${L.members})` : ''}
+          {L.confirm}{audienceReady && preview.data ? ` (${preview.data.count})` : ''}
         </label>
-        <button className="btn-primary h-11 px-6" disabled={!ready || send.isPending} onClick={() => send.mutate()}>
-          {send.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4 rtl:rotate-180" />}{L.send}
+        <button className="btn-primary h-11 px-6" disabled={!ready || create.isPending} onClick={() => create.mutate()}>
+          {create.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : later ? <CalendarClock className="h-4 w-4" /> : <Send className="h-4 w-4 rtl:rotate-180" />}
+          {later ? L.schedule : L.sendNow}
         </button>
       </section>
 
-      <aside className="lg:sticky lg:top-24">
-        <p className="mb-2 text-sm font-semibold text-muted">{L.preview}</p>
-        <div className="flex items-start gap-3 rounded-[18px] border border-line bg-surface p-4 shadow-card">
-          <img src="/icon-192.png" alt="" className="h-10 w-10 rounded-xl" />
-          <div className="min-w-0 flex-1">
-            <p className="truncate font-bold" dir="auto">{title || L.nTitle}</p>
-            <p className="line-clamp-3 text-sm text-muted" dir="auto">{body || L.nBody}</p>
+      <aside className="space-y-4 lg:sticky lg:top-24">
+        <div>
+          <p className="mb-2 text-sm font-semibold text-muted">{L.preview}</p>
+          <div className="flex items-start gap-3 rounded-[18px] border border-line bg-surface p-4 shadow-card">
+            <img src="/icon-192.png" alt="" className="h-10 w-10 rounded-xl" />
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-bold" dir="auto">{title || L.nTitle}</p>
+              <p className="line-clamp-3 text-sm text-muted" dir="auto">{body || L.nBody}</p>
+              {linkKind !== 'none' && <span className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-accent">{linkLabel || (linkKind === 'web' ? 'engosoft.com' : L.open)}{linkKind === 'web' && <ExternalLink className="h-3.5 w-3.5" />}</span>}
+            </div>
           </div>
         </div>
+
+        <section className="card overflow-hidden">
+          <h3 className="flex items-center gap-2 border-b border-line p-4 font-bold"><History className="h-5 w-5 text-accent" />{L.history}</h3>
+          {campaigns.isLoading && <div className="p-4"><Skeleton className="h-24 w-full" /></div>}
+          {campaigns.data?.length === 0 && <p className="p-6 text-center text-sm text-muted">{L.noCampaigns}</p>}
+          <ul className="max-h-[60dvh] divide-y divide-line/70 overflow-y-auto">
+            {campaigns.data?.map((c) => (
+              <li key={c.id} className="space-y-1.5 px-4 py-3">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="min-w-0 font-semibold leading-snug" dir="auto">{c.title}</p>
+                  <span className={clsx('chip shrink-0', statusTone[c.status])}>{L[`st_${c.status}` as const]}</span>
+                </div>
+                <p className="line-clamp-2 text-xs text-muted" dir="auto">{c.audienceSummary}</p>
+                <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
+                  {c.status === 'sent' && <>
+                    <span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" />{L.reached} <b className="num text-ink">{c.recipients}</b></span>
+                    <span className="flex items-center gap-1"><MousePointerClick className="h-3.5 w-3.5" /><b className="num text-ink">{c.clicks}</b> {L.taps}</span>
+                  </>}
+                  <span className="num">{c.status === 'scheduled' ? `${L.scheduledFor} ` : ''}{chatTime(c.sentAt ?? c.scheduledAt, lang)}</span>
+                  <span>{L.by} {c.createdByName}</span>
+                </p>
+                {c.error && <p className="text-xs text-live">{c.error}</p>}
+                {c.status === 'scheduled' && (
+                  <button className="btn-ghost h-8 px-2 text-xs text-live" onClick={() => cancel.mutate(c.id)} disabled={cancel.isPending}><Ban className="h-3.5 w-3.5" />{L.cancel}</button>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
       </aside>
     </div>
   )

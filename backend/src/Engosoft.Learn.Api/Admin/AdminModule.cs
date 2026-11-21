@@ -89,13 +89,13 @@ public static class ChatSettingsStore
 
 public sealed record AdminAddRequest(int PartnerId);
 public sealed record ResolveReportRequest(string Action);
-public sealed record BroadcastRequest(string Title, string Body, string Audience, int? EventId, string? Url);
 
 public static class AdminModule
 {
     public static IServiceCollection AddAdminModule(this IServiceCollection services)
     {
         services.AddScoped<AdminDirectory>();
+        services.AddCampaigns();
         return services;
     }
 
@@ -321,38 +321,8 @@ public static class AdminModule
             return Results.Ok(ChatSettingsStore.Read(chat.Value));
         });
 
-        // ---------------------------------------------------------------- broadcast
+        // ---------------------------------------------------------------- campaigns
 
-        g.MapPost("/broadcast", async (BroadcastRequest body, AppDbContext db, NotificationService notifications, CurrentUser me, TimeProvider clock, CancellationToken ct) =>
-        {
-            var title = (body.Title ?? "").Trim();
-            var text = (body.Body ?? "").Trim();
-            if (title.Length is < 3 or > 120) return Error.Validation("bad_title", "اكتب عنوانًا من 3 إلى 120 حرفًا.").ToProblem();
-            if (text.Length is < 3 or > 500) return Error.Validation("bad_body", "اكتب نص الإشعار (من 3 إلى 500 حرف).").ToProblem();
-            var url = body.Url is { Length: > 0 } u && u.StartsWith('/') && !u.StartsWith("//") ? u : "/notifications";
-            var now = clock.GetUtcNow().UtcDateTime;
-
-            List<int> people;
-            Guid roomId = Guid.Empty;
-            if (body.Audience == "course")
-            {
-                if (body.EventId is not { } eventId) return Error.Validation("no_course", "اختر الدورة.").ToProblem();
-                var room = await db.Rooms.AsNoTracking().SingleOrDefaultAsync(r => r.Kind == RoomKind.Course && r.OdooEventId == eventId, ct);
-                if (room is null) return Error.NotFound("room_not_found", "لا توجد مجموعة لهذه الدورة.").ToProblem();
-                roomId = room.Id;
-                people = await db.Members.Where(m => m.RoomId == room.Id && m.RemovedAt == null).Select(m => m.PartnerId).ToListAsync(ct);
-            }
-            else
-            {
-                people = await db.RefreshTokens.Where(t => t.ExpiresAt > now).Select(t => t.PartnerId).Distinct().ToListAsync(ct);
-            }
-            people.Remove(me.PartnerId);
-            if (people.Count == 0) return Error.Blocked("no_audience", "لا يوجد مستلمون لهذا الإشعار.").ToProblem();
-
-            await notifications.NotifyAsync(people, "announcement", title, text, url, urgent: false, tag: $"announcement-{now.Ticks}", ct: ct);
-            db.Audit.Add(new ChatAudit { RoomId = roomId, ActorPartnerId = me.PartnerId, Action = "broadcast_sent", Details = $"{people.Count} · {title}", At = now });
-            await db.SaveChangesAsync(ct);
-            return Results.Ok(new { sent = people.Count });
-        });
+        g.MapCampaignEndpoints(app);
     }
 }

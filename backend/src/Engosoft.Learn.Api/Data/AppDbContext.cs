@@ -28,6 +28,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<QuizAttempt> QuizAttempts => Set<QuizAttempt>();
     public DbSet<TaskSubmission> TaskSubmissions => Set<TaskSubmission>();
     public DbSet<SubmissionFile> SubmissionFiles => Set<SubmissionFile>();
+    public DbSet<Campaign> Campaigns => Set<Campaign>();
+    public DbSet<CampaignClick> CampaignClicks => Set<CampaignClick>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -112,6 +114,22 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             e.Property(x => x.Body).HasMaxLength(1000);
             e.Property(x => x.Url).HasMaxLength(512);
         });
+
+        b.Entity<Campaign>(e =>
+        {
+            e.HasIndex(x => new { x.Status, x.ScheduledAt });
+            e.Property(x => x.Title).HasMaxLength(120);
+            e.Property(x => x.Body).HasMaxLength(500);
+            e.Property(x => x.LinkUrl).HasMaxLength(512);
+            e.Property(x => x.LinkLabel).HasMaxLength(40);
+            e.Property(x => x.AudienceJson).HasMaxLength(4000);
+            e.Property(x => x.AudienceSummary).HasMaxLength(400);
+            e.Property(x => x.CreatedByName).HasMaxLength(200);
+            e.Property(x => x.Error).HasMaxLength(500);
+            e.Property(x => x.Status).HasConversion<string>().HasMaxLength(16);
+        });
+
+        b.Entity<CampaignClick>(e => e.HasKey(x => new { x.CampaignId, x.PartnerId }));
 
         b.Entity<UserPreference>(e =>
         {

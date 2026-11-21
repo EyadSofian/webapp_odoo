@@ -24,6 +24,7 @@ const ChatRoomScreen = lazy(() => import('./screens/ChatRoomScreen').then((m) =>
 const NotificationsScreen = lazy(() => import('./screens/NotificationsScreen').then((m) => ({ default: m.NotificationsScreen })))
 const ProfileScreen = lazy(() => import('./screens/ProfileScreen').then((m) => ({ default: m.ProfileScreen })))
 const CertificatesScreen = lazy(() => import('./screens/CertificatesScreen').then((m) => ({ default: m.CertificatesScreen })))
+const GoScreen = lazy(() => import('./screens/GoScreen').then((m) => ({ default: m.GoScreen })))
 const AdminScreen = lazy(() => import('./screens/AdminScreen').then((m) => ({ default: m.AdminScreen })))
 const AssessmentScreen = lazy(() => import('./screens/AssessmentScreen').then((m) => ({ default: m.AssessmentScreen })))
 
@@ -98,6 +99,7 @@ const router = createBrowserRouter([
           { path: '/profile', element: <ProfileScreen /> },
           { path: '/certificates', element: <CertificatesScreen /> },
           { path: '/admin', element: <AdminScreen /> },
+          { path: '/go/:campaignId', element: <GoScreen /> },
           { path: '*', element: <Navigate to="/" replace /> },
         ],
       },

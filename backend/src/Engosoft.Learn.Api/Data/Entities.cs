@@ -177,3 +177,37 @@ public sealed class AppSetting
     public string Key { get; set; } = "";
     public string Value { get; set; } = "";
 }
+
+// ---------- Campaigns ----------
+
+public enum CampaignStatus { Scheduled, Sending, Sent, Cancelled, Failed }
+
+/// <summary>A message the admin sends to a chosen audience, now or at a set time. Audience is resolved at send time.</summary>
+public sealed class Campaign
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string Title { get; set; } = "";
+    public string Body { get; set; } = "";
+    /// <summary>Where a tap leads: an app path (starting with /) or an https link. Null opens the notifications inbox.</summary>
+    public string? LinkUrl { get; set; }
+    public string? LinkLabel { get; set; }
+    /// <summary>JSON of <c>CampaignAudience</c>.</summary>
+    public string AudienceJson { get; set; } = "{}";
+    public string AudienceSummary { get; set; } = "";
+    public CampaignStatus Status { get; set; }
+    public DateTime ScheduledAt { get; set; }
+    public DateTime? SentAt { get; set; }
+    public int Recipients { get; set; }
+    public int CreatedByPartnerId { get; set; }
+    public string CreatedByName { get; set; } = "";
+    public DateTime CreatedAt { get; set; }
+    public string? Error { get; set; }
+}
+
+public sealed class CampaignClick
+{
+    public Guid CampaignId { get; set; }
+    public int PartnerId { get; set; }
+    public DateTime At { get; set; }
+}
+
