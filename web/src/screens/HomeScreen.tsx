@@ -32,23 +32,25 @@ export function HomeScreen() {
 
   return (
     <div className="mx-auto max-w-[1280px] md:px-8 md:pt-8">
-      {/* Greeting band in the website's deep navy, the page's one dark block */}
-      <section className="relative overflow-hidden bg-[#001D35] pt-safe text-white md:rounded-[24px]">
-        <div className="relative flex h-14 items-center justify-between px-4 md:hidden">
-          <Logo variant="white" className="h-8 w-auto" />
-          <Link to="/notifications" className="relative grid h-10 w-10 place-items-center rounded-full bg-white/10 text-white" aria-label={t('notifications')}>
+      {/* Greeting header: follows the theme, with the Engosoft dots slowly orbiting behind the side card */}
+      <section className="relative overflow-hidden border-b border-line bg-surface pt-safe md:rounded-[24px] md:border md:shadow-card">
+        <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(120%_90%_at_0%_0%,rgb(var(--brand-500)/0.10),transparent_60%)] rtl:bg-[radial-gradient(120%_90%_at_100%_0%,rgb(var(--brand-500)/0.10),transparent_60%)]" />
+        <HeroOrbit />
+        <div className="relative flex h-14 items-center justify-between px-5 md:hidden">
+          <Logo className="h-8 w-auto" />
+          <Link to="/notifications" className="relative grid h-10 w-10 place-items-center rounded-full border border-line bg-surface text-ink" aria-label={t('notifications')}>
             <Bell className="h-5 w-5" />
-            {!!badges?.notifications && <span className="absolute end-2 top-2 h-2.5 w-2.5 rounded-full bg-live ring-2 ring-[#001D35]" />}
+            {!!badges?.notifications && <span className="absolute end-2 top-2 h-2.5 w-2.5 rounded-full bg-live ring-2 ring-surface" />}
           </Link>
         </div>
-        <div className="relative grid gap-6 px-5 pb-20 pt-4 md:grid-cols-[minmax(0,1fr)_minmax(0,420px)] md:items-center md:gap-10 md:p-10">
+        <div className="relative grid grid-cols-1 gap-6 px-5 pb-6 pt-3 md:grid-cols-[minmax(0,1fr)_minmax(0,400px)] md:items-center md:gap-10 md:p-10">
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.45 }}>
-            <p className="text-sm font-medium text-white/65 md:text-base">{greeting(t)}{firstName ? '،' : ''}</p>
-            <h1 className="mt-1 font-display text-[30px] font-bold leading-tight md:text-[46px]">{isLoading ? <span className="inline-block h-9 w-48 rounded-lg bg-white/10" /> : firstName || t('hello')}</h1>
-            <p className="mt-3 max-w-md text-[14px] leading-6 text-white/75 md:text-base md:leading-7">
+            <p className="text-sm font-medium text-muted md:text-base">{greeting(t)}{firstName ? '،' : ''}</p>
+            <h1 className="mt-1 font-display text-[30px] font-bold leading-tight md:text-[44px]">{isLoading ? <span className="inline-block h-9 w-48 rounded-lg bg-sunken" /> : firstName || t('hello')}</h1>
+            <p className="mt-2 max-w-md text-[14px] leading-6 text-muted md:text-base md:leading-7">
               {data?.nextSession
-                ? (lang === 'ar' ? `محاضرتك القادمة ${relativeDay(data.nextSession.start!, lang)}. يُتاح الدخول قبل موعدها بربع ساعة.` : `Your next session is ${relativeDay(data.nextSession.start!, lang)}. You can join 15 minutes before it starts.`)
-                : (lang === 'ar' ? 'تابع دوراتك من حيث توقفت.' : 'Pick up where you left off.')}
+                ? (lang === 'ar' ? `محاضرتك القادمة ${relativeDay(data.nextSession.start!, lang)}، ويُتاح الدخول قبل موعدها بربع ساعة.` : `Your next session is ${relativeDay(data.nextSession.start!, lang)}. You can join 15 minutes before it starts.`)
+                : (lang === 'ar' ? 'أكمل دوراتك من آخر درس وصلت إليه.' : 'Pick up from the last lesson you reached.')}
             </p>
             {data && (
               <div className="mt-6 flex items-stretch">
@@ -57,21 +59,25 @@ export function HomeScreen() {
                   { to: '/chats', value: badges?.messages ?? data.unreadMessages, label: t('newMessages') },
                   { to: '/certificates', value: data.certificateCount, label: t('certificates') },
                 ].map(({ to, value, label }, i) => (
-                  <Link key={to} to={to} className={clsx('min-w-0 pe-5 transition-opacity hover:opacity-80 md:pe-8', i > 0 && 'border-s border-white/15 ps-5 md:ps-8')}>
-                    <CountUp value={value} className="num block text-[22px] font-bold leading-7 md:text-[28px] md:leading-9" />
-                    <span className="block truncate text-[12px] text-white/65 md:text-[13px]">{label}</span>
+                  <Link key={to} to={to} className={clsx('group min-w-0 pe-5 md:pe-8', i > 0 && 'border-s border-line ps-5 md:ps-8')}>
+                    <CountUp value={value} className="num block text-[22px] font-bold leading-7 text-ink transition-colors group-hover:text-accent md:text-[28px] md:leading-9" />
+                    <span className="block truncate text-[12px] text-muted md:text-[13px]">{label}</span>
                   </Link>
                 ))}
               </div>
             )}
           </motion.div>
-          <div className="hidden md:block">
-            {data?.nextSession && <NextSessionCard session={data.nextSession} instructor={nextCourse?.instructor?.name} channelId={nextCourse?.courseChannelId} />}
+          <div className="relative hidden md:block">
+            {data?.nextSession
+              ? <NextSessionCard session={data.nextSession} instructor={nextCourse?.instructor?.name} channelId={nextCourse?.courseChannelId} />
+              : data?.continueLearning[0]
+                ? <div><p className="mb-2 text-sm font-semibold text-muted">{t('continueLearning')}</p><RecordedCourseTile c={data.continueLearning[0]} wide /></div>
+                : null}
           </div>
         </div>
       </section>
 
-      <div className="relative -mt-14 space-y-8 px-4 md:mt-8 md:px-0">
+      <div className="relative space-y-8 px-4 pt-5 md:mt-8 md:px-0 md:pt-0">
         {error ? <ErrorState error={error} onRetry={() => refetch()} /> : null}
 
         <div className="md:hidden">
@@ -141,7 +147,10 @@ export function HomeScreen() {
                     <Link to="/courses?tab=recorded" className="text-sm font-bold text-accent hover:underline">{t('seeAll')}</Link>
                   </div>
                   <div className="no-scrollbar -mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 md:mx-0 md:grid md:grid-cols-2 md:gap-5 md:overflow-visible md:px-0 xl:grid-cols-3">
-                    {data.continueLearning.slice(0, 6).map((c) => <RecordedCourseTile key={c.channelId} c={c} />)}
+                    {data.continueLearning.slice(0, 6).map((c, i) => (
+                      // On desktop the first one is already in the header when there is no upcoming session.
+                      <div key={c.channelId} className={clsx('contents', i === 0 && !data.nextSession && 'md:hidden')}><RecordedCourseTile c={c} /></div>
+                    ))}
                   </div>
                 </section>
               </Reveal>
@@ -245,3 +254,24 @@ function SetupCard() {
     </>
   )
 }
+
+/** The three dots of the Engosoft mark on slow orbits: quiet motion that belongs to the brand. Still when motion is reduced. */
+function HeroOrbit() {
+  return (
+    <div aria-hidden className="pointer-events-none absolute -top-44 end-[-230px] h-[380px] w-[380px] text-accent opacity-80 md:end-[40px] md:top-1/2 md:h-[520px] md:w-[520px] md:-translate-y-1/2">
+      <svg viewBox="0 0 400 400" className="h-full w-full">
+        <g className="animate-[spin_70s_linear_infinite]" style={{ transformOrigin: '200px 200px' }}>
+          <circle cx="200" cy="200" r="190" fill="none" stroke="currentColor" strokeOpacity="0.12" strokeWidth="1.25" strokeDasharray="2 9" />
+          <circle cx="200" cy="10" r="6" fill="currentColor" fillOpacity="0.45" />
+        </g>
+        <g className="animate-[spin_45s_linear_infinite_reverse]" style={{ transformOrigin: '200px 200px' }}>
+          <circle cx="200" cy="200" r="138" fill="none" stroke="currentColor" strokeOpacity="0.14" strokeWidth="1.25" />
+          <circle cx="338" cy="200" r="4.5" fill="currentColor" fillOpacity="0.55" />
+          <circle cx="62" cy="200" r="3" fill="currentColor" fillOpacity="0.35" />
+        </g>
+        <circle cx="200" cy="200" r="86" fill="currentColor" fillOpacity="0.05" />
+      </svg>
+    </div>
+  )
+}
+
