@@ -402,10 +402,8 @@ public sealed class AssessmentService(
     {
         var appUsers = await db.RefreshTokens.Where(t => t.ExpiresAt > Now).Select(t => t.PartnerId).Distinct().ToListAsync(ct);
         if (appUsers.Count == 0) return [];
-        var regs = await odoo.SearchReadAsync("event.registration",
-            D(("event_id", "=", eventId), ("partner_id", "in", appUsers.ToArray()), ("state", "in", new[] { "open", "done" })),
-            ["partner_id", "state", "access_expiration_date"], ct: ct);
-        return regs.Where(r => ChatPolicy.IsEligibleStudent(r.Str("state"), r.Utc("access_expiration_date"), Now))
-            .Select(r => r.M2O("partner_id")!.Value.Id).Distinct().ToList();
+        return (await Seats.OfPeopleAsync(odoo, [eventId], appUsers, ct))
+            .Where(s => ChatPolicy.IsEligibleStudent(s.Reg.Str("state"), s.Reg.Utc("access_expiration_date"), Now))
+            .Select(s => s.PartnerId).Distinct().ToList();
     }
 }

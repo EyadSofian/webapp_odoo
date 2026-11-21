@@ -124,8 +124,41 @@ public sealed class TokenService(IOptions<AuthOptions> options, AppDbContext db,
     public static string Hash(string token) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token)));
 }
 
+public enum ReuseVerdict { Reject, Reissue, RevokeChain }
+
+/// <summary>What to do when a refresh token that was already exchanged comes back. Free of I/O so it can be tested.</summary>
+public static class RefreshRules
+{
+    public static ReuseVerdict OnReuse(RefreshToken presented, RefreshToken? next)
+    {
+        if (presented.RevokedAt is null) return ReuseVerdict.Reissue;
+        // Signed out (or ended by the server): no token was issued in its place.
+        if (presented.ReplacedById is null || next is null) return ReuseVerdict.Reject;
+        // Its replacement was never used: the answer with it was lost on the way to the phone.
+        if (next.RevokedAt is null) return ReuseVerdict.Reissue;
+        return ReuseVerdict.RevokeChain;
+    }
+}
+
 public static class AuthModule
 {
+    private static Task<RefreshToken?> NextAsync(AppDbContext db, RefreshToken token, CancellationToken ct) =>
+        token.ReplacedById is { } id ? db.RefreshTokens.SingleOrDefaultAsync(t => t.Id == id, ct) : Task.FromResult<RefreshToken?>(null);
+
+    /// <summary>Revokes a token and every token issued after it in the same sign-in.</summary>
+    private static async Task RevokeChainAsync(AppDbContext db, Guid fromId, DateTime now, CancellationToken ct)
+    {
+        Guid? id = fromId;
+        for (var hops = 0; id is { } current && hops < 10_000; hops++)
+        {
+            var t = await db.RefreshTokens.SingleOrDefaultAsync(x => x.Id == current, ct);
+            if (t is null) break;
+            t.RevokedAt ??= now;
+            id = t.ReplacedById;
+        }
+        await db.SaveChangesAsync(ct);
+    }
+
     public static IServiceCollection AddAuthModule(this IServiceCollection services)
     {
         services.AddOptions<AuthOptions>().BindConfiguration(AuthOptions.Section)
@@ -203,32 +236,49 @@ public static class AuthModule
             var stored = await db.RefreshTokens.SingleOrDefaultAsync(t => t.TokenHash == hash, ct);
             if (stored is null || stored.ExpiresAt < now)
                 return Error.Unauthorized("invalid_refresh", "سجّل الدخول مرة أخرى.").ToProblem();
+
+            RefreshToken? unused = null;
             if (stored.RevokedAt is not null)
             {
-                // Two tabs refreshing at the same moment: the loser gets a plain 401 and picks up the winner's tokens.
-                if (stored.ReplacedById is not null && now - stored.RevokedAt.Value < TimeSpan.FromSeconds(60))
-                    return Error.Unauthorized("invalid_refresh", "سجّل الدخول مرة أخرى.").ToProblem();
-                // A rotated token came back later: treat it as stolen and end every session of this user.
-                await db.RefreshTokens.Where(t => t.PartnerId == stored.PartnerId && t.RevokedAt == null)
-                    .ExecuteUpdateAsync(s => s.SetProperty(t => t.RevokedAt, now), ct);
-                return Error.Unauthorized("invalid_refresh", "سجّل الدخول مرة أخرى.").ToProblem();
+                var next = await NextAsync(db, stored, ct);
+                switch (RefreshRules.OnReuse(stored, next))
+                {
+                    case ReuseVerdict.Reissue:
+                        // The phone never received the token we exchanged this one for: iOS suspends a web app in the
+                        // middle of a request, or the network drops. That token was never used, so retire it and
+                        // continue this sign-in instead of signing the person out.
+                        unused = next;
+                        break;
+                    case ReuseVerdict.RevokeChain:
+                        // The token we exchanged it for was used as well: two copies exist. End this sign-in only;
+                        // the person's other devices keep theirs.
+                        await RevokeChainAsync(db, stored.ReplacedById!.Value, now, ct);
+                        return Error.Unauthorized("invalid_refresh", "سجّل الدخول مرة أخرى.").ToProblem();
+                    default:
+                        return Error.Unauthorized("invalid_refresh", "سجّل الدخول مرة أخرى.").ToProblem();
+                }
             }
 
             // Re-check in Odoo on every refresh so a deactivated account loses access within one token lifetime.
             var resolved = await identity.ResolveAsync(stored.Uid, ct);
             if (!resolved.IsSuccess)
             {
-                stored.RevokedAt = now;
+                stored.RevokedAt ??= now;
+                if (unused is not null) unused.RevokedAt = now;
                 await db.SaveChangesAsync(ct);
                 return resolved.Error!.ToProblem();
             }
             var (user, mail, lang) = resolved.Value;
-            stored.RevokedAt = now;
+            stored.RevokedAt ??= now;
+            if (unused is not null) unused.RevokedAt = now;
             var issued = await tokens.IssueAsync(user, mail, lang, http.Request.Headers.UserAgent, ct);
-            stored.ReplacedById = (await db.RefreshTokens.SingleAsync(t => t.TokenHash == TokenService.Hash(issued.RefreshToken), ct)).Id;
+            var issuedId = (await db.RefreshTokens.SingleAsync(t => t.TokenHash == TokenService.Hash(issued.RefreshToken), ct)).Id;
+            stored.ReplacedById = issuedId;
+            // The retired one points at the new token too, so if a copy of it ever shows up, it is caught as a second copy.
+            if (unused is not null) unused.ReplacedById = issuedId;
             await db.SaveChangesAsync(ct);
             return Results.Ok(issued);
-        }).RequireRateLimiting("login").AllowAnonymous();
+        }).RequireRateLimiting("refresh").AllowAnonymous();
 
         g.MapPost("/logout", async (RefreshRequest body, AppDbContext db, TimeProvider clock, CancellationToken ct) =>
         {

@@ -50,7 +50,13 @@ function RealtimeBridge() {
         void queryClient.invalidateQueries({ queryKey: ['chats'] })
         void queryClient.invalidateQueries({ queryKey: ['badges'] })
       }),
-      onHub('roomRemoved', () => void queryClient.invalidateQueries({ queryKey: ['chats'] })),
+      // Added to (or removed from) a course in Odoo: the group, the course and Home change together.
+      onHub('roomAdded', () => {
+        for (const key of ['chats', 'badges', 'live-courses', 'home', 'courses']) void queryClient.invalidateQueries({ queryKey: [key] })
+      }),
+      onHub('roomRemoved', () => {
+        for (const key of ['chats', 'live-courses', 'home', 'courses']) void queryClient.invalidateQueries({ queryKey: [key] })
+      }),
       onHub('notification', (n: { title: string; url?: string }) => {
         void queryClient.invalidateQueries({ queryKey: ['notifications'] })
         void queryClient.invalidateQueries({ queryKey: ['badges'] })

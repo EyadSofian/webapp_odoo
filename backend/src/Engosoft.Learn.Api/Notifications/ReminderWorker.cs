@@ -65,13 +65,11 @@ public sealed class ReminderWorker(IServiceScopeFactory scopes, TimeProvider clo
         if (due.Count == 0) return;
 
         var eventIds = due.Select(d => d.EventId).Distinct().ToArray();
-        var regs = await odoo.SearchReadAsync("event.registration",
-            D(("event_id", "in", eventIds), ("partner_id", "in", appUsers.ToArray()), ("state", "in", new[] { "open", "done" })),
-            ["event_id", "partner_id", "state", "access_expiration_date"], ct: ct);
-        var byEvent = regs
-            .Where(r => ChatPolicy.IsEligibleStudent(r.Str("state"), r.Utc("access_expiration_date"), now))
-            .GroupBy(r => r.M2O("event_id")!.Value.Id)
-            .ToDictionary(g => g.Key, g => g.Select(r => r.M2O("partner_id")!.Value.Id).Distinct().ToList());
+        var seats = await Seats.OfPeopleAsync(odoo, eventIds, appUsers, ct);
+        var byEvent = seats
+            .Where(s => ChatPolicy.IsEligibleStudent(s.Reg.Str("state"), s.Reg.Utc("access_expiration_date"), now) && s.Reg.M2O("event_id") is not null)
+            .GroupBy(s => s.Reg.M2O("event_id")!.Value.Id)
+            .ToDictionary(g => g.Key, g => g.Select(s => s.PartnerId).Distinct().ToList());
 
         foreach (var d in due)
         {

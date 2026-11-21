@@ -13,6 +13,7 @@ public static class ChatModule
         services.AddScoped<MembershipSync>();
         services.AddScoped<ChatService>();
         services.AddHostedService<MembershipSyncWorker>();
+        services.AddHostedService<RegistrationWatcher>();
         services.AddSignalR(o =>
         {
             o.MaximumReceiveMessageSize = 64 * 1024;

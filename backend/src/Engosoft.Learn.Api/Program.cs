@@ -81,6 +81,11 @@ services.AddRateLimiter(o =>
     o.AddPolicy("login", http => RateLimitPartition.GetFixedWindowLimiter(
         http.Connection.RemoteIpAddress?.ToString() ?? "unknown",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
+    // Token refresh: a refresh token cannot be guessed, so this only stops floods. Kept apart from sign-in, because
+    // many learners on one mobile network share an address and each refreshes every half hour.
+    o.AddPolicy("refresh", http => RateLimitPartition.GetFixedWindowLimiter(
+        http.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 120, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
     // AI quiz generation costs money and minutes: a few per person per hour.
     o.AddPolicy("ai", http => RateLimitPartition.GetFixedWindowLimiter(
         http.User.FindFirst(CurrentUser.ClaimPartner)?.Value ?? "anon",

@@ -52,11 +52,12 @@ public sealed partial class LearningService(
             var map = new Dictionary<int, EventAccess>();
             // Everyone sees the courses they are registered in; staff also see the ones they teach (teaching wins).
             {
-                var regs = await odoo.SearchReadAsync("event.registration",
-                    D(("partner_id", "=", user.PartnerId), ("state", "in", new[] { "open", "done" })),
-                    ["event_id", "access_expiration_date", "attendance_progress", "attendance_attended_sessions", "attendance_total_sessions"], ct: ct);
+                var login = await LoginAsync(user, ct);
+                var regs = await odoo.SearchReadAsync("event.registration", Seats.MineDomain(user.PartnerId, login),
+                    ["event_id", "partner_id", "email", "access_expiration_date", "attendance_progress", "attendance_attended_sessions", "attendance_total_sessions"], ct: ct);
                 foreach (var r in regs)
                 {
+                    if (!Seats.BelongsTo(r, user.PartnerId, login)) continue;
                     if (r.M2O("event_id") is not { } ev) continue;
                     var until = r.Utc("access_expiration_date");
                     var access = new EventAccess(ev.Id, "student", until is not null && until < Now, until,
@@ -121,10 +122,25 @@ public sealed partial class LearningService(
         return e;
     }
 
+    /// <summary>The caller's Odoo login, which also claims seats that staff registered by email without a contact.</summary>
+    private async Task<string?> LoginAsync(CurrentUser user, CancellationToken ct) =>
+        await cache.GetOrCreateAsync($"login:{user.Uid}", async entry =>
+        {
+            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(30);
+            return (await odoo.ReadAsync("res.users", [user.Uid], ["login"], ct)).FirstOrDefault().Str("login");
+        });
+
     public void Invalidate(CurrentUser user)
     {
         cache.Remove($"my-events:{user.PartnerId}:{user.Kind}");
         cache.Remove($"my-courses:{user.PartnerId}");
+    }
+
+    /// <summary>A seat changed in Odoo: forget this person's cached course list, whatever role they signed in with.</summary>
+    public static void InvalidatePartner(IMemoryCache cache, int partnerId)
+    {
+        foreach (var kind in Enum.GetValues<UserKind>()) cache.Remove($"my-events:{partnerId}:{kind}");
+        cache.Remove($"my-courses:{partnerId}");
     }
 
     // ------------------------------------------------------------------ live courses

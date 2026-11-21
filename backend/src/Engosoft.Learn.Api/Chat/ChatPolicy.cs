@@ -11,6 +11,8 @@ public sealed class ChatOptions
     public int ReadOnlyAfterDays { get; set; } = 14;
     public int SyncIntervalMinutes { get; set; } = 15;
     public int ResyncAfterMinutes { get; set; } = 10;
+    /// <summary>How often to look in Odoo for added or changed registrations (seconds).</summary>
+    public int RegistrationPollSeconds { get; set; } = 60;
     public int MaxAttachmentMb { get; set; } = 20;
     public bool StudentsCanUpload { get; set; } = true;
     public string StoragePath { get; set; } = "storage/chat";

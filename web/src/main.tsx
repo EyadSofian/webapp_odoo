@@ -50,15 +50,31 @@ function GuestOnly({ children }: { children: ReactNode }) {
   return user ? <Navigate to="/" replace /> : <>{children}</>
 }
 
-/** New deploys apply on their own: the new service worker takes over and the page reloads once. Checks hourly while open. */
+/**
+ * New deploys install in the background and take over only at a moment nobody notices: right after the app opens,
+ * or when the person comes back after a long break. Never in the middle of use: on iPhone a sudden reload looks
+ * like the app throwing you out. A closed app picks the new version up on its next start anyway. Checks hourly.
+ */
 function UpdatePrompt() {
   useEffect(() => {
-    registerSW({
+    let waiting = false
+    let hiddenAt = 0
+    const apply = registerSW({
       immediate: true,
+      onNeedRefresh() {
+        waiting = true
+        if (performance.now() < 8000) void apply(true)
+      },
       onRegisteredSW(_url, reg) {
         if (reg) setInterval(() => { void reg.update().catch(() => undefined) }, 60 * 60 * 1000)
       },
     })
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') { hiddenAt = Date.now(); return }
+      if (waiting && hiddenAt && Date.now() - hiddenAt > 10 * 60 * 1000) void apply(true)
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => document.removeEventListener('visibilitychange', onVisibility)
   }, [])
   return null
 }

@@ -169,11 +169,9 @@ public static class NotificationsModule
         var tz = (await odoo.ReadAsync("event.event", [ev.Id], ["date_tz"], ct)).FirstOrDefault().Str("date_tz") ?? "Asia/Riyadh";
         var appUsers = await db.RefreshTokens.Where(t => t.ExpiresAt > now).Select(t => t.PartnerId).Distinct().ToListAsync(ct);
         if (appUsers.Count == 0) return (ev.Id, ev.Name, track.Str("name") ?? "", track.Utc("date"), tz, []);
-        var regs = await odoo.SearchReadAsync("event.registration",
-            D(("event_id", "=", ev.Id), ("partner_id", "in", appUsers.ToArray()), ("state", "in", new[] { "open", "done" })),
-            ["partner_id", "state", "access_expiration_date"], ct: ct);
-        var people = regs.Where(r => ChatPolicy.IsEligibleStudent(r.Str("state"), r.Utc("access_expiration_date"), now))
-            .Select(r => r.M2O("partner_id")!.Value.Id).Distinct().ToList();
+        var people = (await Seats.OfPeopleAsync(odoo, [ev.Id], appUsers, ct))
+            .Where(s => ChatPolicy.IsEligibleStudent(s.Reg.Str("state"), s.Reg.Utc("access_expiration_date"), now))
+            .Select(s => s.PartnerId).Distinct().ToList();
         return (ev.Id, LearningService.CleanTitle(ev.Name), LearningService.CleanTitle(track.Str("name") ?? ""), track.Utc("date"), tz, people);
     }
 

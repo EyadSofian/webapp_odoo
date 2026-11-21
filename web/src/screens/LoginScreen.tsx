@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Check, Eye, EyeOff, Loader2, Moon, Sun } from 'lucide-react'
 import { useReducedMotion } from 'framer-motion'
-import { ApiError, devLoginAs, getRemember, login, setRemember } from '../lib/api'
+import { ApiError, devLoginAs, getRemember, isInstalledApp, login, setRemember } from '../lib/api'
 import { useI18n } from '../lib/i18n'
 import { useTheme } from '../lib/theme'
 import { AnimatePresence, motion } from '../lib/motion'
@@ -234,13 +234,16 @@ export function LoginScreen() {
 
             {step === 'password' && !busy && (
               <div className="flex flex-wrap gap-2 px-4 pb-3">
-                <button type="button" role="switch" aria-checked={remember} onClick={() => { setRemember(!remember); setRememberState(!remember) }}
-                  className={`${chip} inline-flex items-center gap-2 ${remember ? '!border-brand-500/40 !bg-brand-50 !text-accent' : ''}`}>
-                  <span className={`grid h-4 w-4 place-items-center rounded-[5px] border ${remember ? 'border-brand-500 bg-brand-500 text-white' : 'border-line'}`}>
-                    {remember && <Check className="h-3 w-3" strokeWidth={3} />}
-                  </span>
-                  {t('rememberMe')}
-                </button>
+                {/* The installed app always stays signed in, so the choice only shows in a browser tab */}
+                {!isInstalledApp() && (
+                  <button type="button" role="switch" aria-checked={remember} onClick={() => { setRemember(!remember); setRememberState(!remember) }}
+                    className={`${chip} inline-flex items-center gap-2 ${remember ? '!border-brand-500/40 !bg-brand-50 !text-accent' : ''}`}>
+                    <span className={`grid h-4 w-4 place-items-center rounded-[5px] border ${remember ? 'border-brand-500 bg-brand-500 text-white' : 'border-line'}`}>
+                      {remember && <Check className="h-3 w-3" strokeWidth={3} />}
+                    </span>
+                    {t('rememberMe')}
+                  </button>
+                )}
                 <a className={chip} href={`${WEBSITE}/web/reset_password`} target="_blank" rel="noreferrer">{t('forgot')}</a>
                 <button type="button" className={chip} onClick={changeEmail}>{t('chatChangeEmail')}</button>
               </div>

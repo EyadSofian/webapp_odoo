@@ -21,7 +21,17 @@ interface StoredSession {
  */
 const REMEMBER_KEY = 'engosoft.remember'
 
+/** Opened from the home screen (installed). iOS ends a backgrounded home-screen app often, which wipes sessionStorage. */
+export function isInstalledApp(): boolean {
+  if (typeof window === 'undefined') return false
+  try {
+    return window.matchMedia('(display-mode: standalone)').matches || (navigator as Navigator & { standalone?: boolean }).standalone === true
+  } catch { return false }
+}
+
+/** An installed app always stays signed in, like any other app on the phone; "remember me" only applies in a browser tab. */
 export function getRemember(): boolean {
+  if (isInstalledApp()) return true
   try { return localStorage.getItem(REMEMBER_KEY) !== '0' } catch { return true }
 }
 
@@ -40,6 +50,16 @@ function read(): StoredSession | null {
 
 let session: StoredSession | null = read()
 const listeners = new Set<(s: StoredSession | null) => void>()
+
+// A session kept for this tab only (remember me off) moves to lasting storage once the app runs installed.
+if (session && isInstalledApp()) {
+  try {
+    if (!localStorage.getItem(STORAGE_KEY)) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(session))
+      sessionStorage.removeItem(STORAGE_KEY)
+    }
+  } catch { /* storage unavailable: keep it in memory */ }
+}
 
 // Another tab refreshed or signed out: follow it, so this tab never reuses a rotated refresh token.
 if (typeof window !== 'undefined') {

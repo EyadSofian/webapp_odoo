@@ -7,8 +7,8 @@ import { clientsClaim } from 'workbox-core'
 
 declare let self: ServiceWorkerGlobalScope
 
-// A new deploy takes over at once, so nobody stays on an old version of the app.
-void self.skipWaiting()
+// A new deploy installs in the background and waits; the page tells it when to take over (SKIP_WAITING below),
+// so nobody is reloaded in the middle of a chat or a lesson.
 clientsClaim()
 
 precacheAndRoute(self.__WB_MANIFEST)

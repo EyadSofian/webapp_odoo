@@ -10,8 +10,8 @@ import { ApiError, api, fetchBlobUrl } from '../lib/api'
 import { chatHub, ensureHub, hubErrorMessage, onHub } from '../lib/hub'
 import { useAuth } from '../lib/auth'
 import { useI18n } from '../lib/i18n'
-import { dayKey, fileSize, formatTime, relativeDay } from '../lib/format'
-import type { MemberDto, MessageDto, RoomDetail } from '../lib/types'
+import { dayKey, fileSize, formatDay, formatTime, relativeDay } from '../lib/format'
+import type { LiveCourseDetail, MemberDto, MessageDto, RoomDetail } from '../lib/types'
 import { Avatar, CourseCover, ErrorState, RoleBadge, Sheet, Skeleton, TopBar, useAuthedImage, useToast } from '../components/ui'
 import { MentionList, MicButton, RichBody, VoicePlayer, VoiceRecorder, mentionQuery } from '../components/chatExtras'
 
@@ -236,7 +236,10 @@ export function ChatRoomScreen() {
               : (lang === 'ar' ? 'بداية مجموعة الدورة. تظهر الرسائل لأعضاء الدورة فقط.' : 'Start of the course group. Only course members see these messages.')}
           </p>
         )}
-        {loaded && messages.length === 0 && pending.length === 0 && !joinError && (
+        {loaded && messages.length === 0 && pending.length === 0 && !joinError && room.data?.kind === 'course' && (
+          <GroupWelcome room={room.data} />
+        )}
+        {loaded && messages.length === 0 && pending.length === 0 && !joinError && room.data?.kind !== 'course' && (
           <div className="mx-auto mt-10 max-w-xs rounded-2xl bg-surface p-5 text-center shadow-card">
             <ShieldCheck className="mx-auto mb-2 h-8 w-8 text-accent" />
             <p className="text-sm">{room.data?.kind === 'question'
@@ -707,5 +710,72 @@ function RoomInfo({ open, onClose, room, staff, onChanged }: { open: boolean; on
         </section>
       </div>
     </Sheet>
+  )
+}
+
+/**
+ * A course group nobody has written in yet: the person just joined, so show what this group is, when the course
+ * starts, and how it works, instead of an empty screen.
+ */
+function GroupWelcome({ room }: { room: RoomDetail }) {
+  const { lang } = useI18n()
+  const navigate = useNavigate()
+  const ar = lang === 'ar'
+  const course = useQuery({
+    queryKey: ['live-course', String(room.eventId)],
+    queryFn: () => api<LiveCourseDetail>(`/api/live-courses/${room.eventId}`),
+    staleTime: 60_000,
+  })
+  const card = course.data?.course
+  const next = card?.nextSession ?? null
+  const first = next?.number === 1
+  const staff = isStaffRole(room.myRole)
+  const rules = staff
+    ? [
+        { icon: Megaphone, text: ar ? 'ما تكتبه هنا يصل إلى كل متدربي الدورة، ويصلهم إشعار برسائل فريق الدورة.' : 'Everything you post reaches every learner, with a notification.' },
+        { icon: MessageCircleQuestion, text: ar ? 'تصلك أسئلة المتدربين هنا وفي الأسئلة الخاصة.' : 'Learner questions arrive here and as private questions.' },
+      ]
+    : [
+        { icon: Megaphone, text: ar ? 'إعلانات المحاضر وتغيير المواعيد تصل هنا، ومعها إشعار.' : 'Instructor announcements and schedule changes arrive here, with a notification.' },
+        { icon: MessageCircleQuestion, text: ar ? 'اسأل هنا، وسيجيبك المحاضر أو فريق الدورة.' : 'Ask here; the instructor or the course team answers.' },
+        { icon: Lock, text: ar ? 'الرسائل لأعضاء الدورة فقط، ولا توجد رسائل خاصة بين المتدربين.' : 'Only course members see messages; learners cannot message each other privately.' },
+      ]
+
+  return (
+    <div className="mx-auto mt-4 max-w-sm overflow-hidden rounded-3xl bg-surface shadow-card">
+      <CourseCover eventId={room.eventId} title={room.title} className="aspect-[16/9] w-full" rounded="rounded-none" />
+      <div className="p-5">
+        <p className="text-[13px] font-semibold text-accent">{ar ? 'انضممت إلى مجموعة الدورة' : 'You joined the course group'}</p>
+        <h2 className="mt-1 font-display text-xl font-bold leading-snug" dir="auto">{room.title}</h2>
+        {/* Each part isolated, so a Latin code or name does not reorder the Arabic around it */}
+        <p className="num mt-1 text-sm text-muted">
+          {[room.code, card?.instructor?.name, `${room.memberCount} ${ar ? 'عضوًا' : 'members'}`].filter(Boolean).map((part, i) => (
+            <span key={i}>{i > 0 && ' · '}<bdi>{part}</bdi></span>
+          ))}
+        </p>
+
+        {course.isLoading && <Skeleton className="mt-4 h-[68px] w-full" />}
+        {next?.start && (
+          <div className="mt-4 rounded-2xl bg-sunken px-4 py-3">
+            <p className="text-xs text-muted">{first ? (ar ? 'أول محاضرة' : 'First session') : (ar ? 'المحاضرة القادمة' : 'Next session')}</p>
+            <p className="num mt-0.5 font-bold">{formatDay(next.start, lang)} · {formatTime(next.start, lang)}</p>
+            <p className="mt-0.5 truncate text-sm text-muted" dir="auto">{next.title}</p>
+          </div>
+        )}
+
+        <ul className="mt-4 space-y-3">
+          {rules.map(({ icon: Icon, text }) => (
+            <li key={text} className="flex items-start gap-3 text-sm leading-6">
+              <Icon className="mt-1 h-4 w-4 shrink-0 text-accent" />
+              <span>{text}</span>
+            </li>
+          ))}
+        </ul>
+
+        <button type="button" className="btn-soft mt-5 w-full" onClick={() => navigate(`/live/${room.eventId}`)}>
+          {ar ? 'صفحة الدورة والمحاضرات' : 'Course page and sessions'}
+        </button>
+      </div>
+    </div>
   )
 }

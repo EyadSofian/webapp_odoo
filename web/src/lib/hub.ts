@@ -21,7 +21,7 @@ function build() {
     .configureLogging(LogLevel.Warning)
     .build()
   c.serverTimeoutInMilliseconds = 60_000
-  for (const event of ['message', 'messageUpdated', 'typing', 'roomActivity', 'roomUpdated', 'roomRemoved', 'notification', 'muted']) {
+  for (const event of ['message', 'messageUpdated', 'typing', 'roomActivity', 'roomUpdated', 'roomAdded', 'roomRemoved', 'notification', 'muted']) {
     c.on(event, (...args) => handlers.get(event)?.forEach((h) => h(...args)))
   }
   c.onreconnecting(emitState)
