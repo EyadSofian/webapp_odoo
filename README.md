@@ -103,7 +103,6 @@ The repository has a `Dockerfile`: Railway builds the web app, publishes the API
 5 times, the `/app/storage` volume mount) live in `.railway/railway.ts`. Railway does not read that file on deploy: after
 changing it, run `npm install` once at the repository root, then `railway config plan` to review and `railway config apply`
 to write the settings to the service (expect a redeploy). Variables are not managed there and stay in Railway.
-`railway.json` (Config as Code) is read only until 2026-12-01 and can be deleted once `railway config apply` has run.
 Add a PostgreSQL service and reference its `DATABASE_URL` from the app service (the backend converts it).
 Set `Auth__SigningKey`, `Odoo__IntegrationUid`, `Odoo__ApiKey`, `Webhooks__Secret`, and optionally `Bunny__StreamTokenKey`
 and `OpenAI__ApiKey`. Mount a volume at `/app/storage` so chat files and task submissions survive redeploys.

@@ -1,8 +1,8 @@
 import { defineRailway, project, service, volume } from "railway/iac";
 
-// Replaces railway.json (Config as Code), which Railway stops reading on 2026-12-01.
+// Replaces railway.json (Config as Code), which Railway stopped reading on 2026-12-01.
 // Railway does not read this file on deploy: `railway config apply` writes these
-// settings to the service, and deploys then use them.
+// settings to the service, and deploys then use them. First applied 2026-11-22.
 //
 // This repository manages only its own resources in the environment; the Postgres
 // service and its volume are left alone. Other repositories export their own partial name.
