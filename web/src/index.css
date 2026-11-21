@@ -1,8 +1,7 @@
-@import '@fontsource/tajawal/400.css';
-@import '@fontsource/tajawal/500.css';
-@import '@fontsource/tajawal/700.css';
-@import '@fontsource/noto-kufi-arabic/500.css';
-@import '@fontsource/noto-kufi-arabic/700.css';
+@import '@fontsource/ibm-plex-sans-arabic/400.css';
+@import '@fontsource/ibm-plex-sans-arabic/500.css';
+@import '@fontsource/ibm-plex-sans-arabic/600.css';
+@import '@fontsource/ibm-plex-sans-arabic/700.css';
 @import '@fontsource/manrope/500.css';
 @import '@fontsource/manrope/700.css';
 
@@ -90,10 +89,10 @@
     line-height: 1.6;
     overscroll-behavior-y: none;
   }
-  h1, h2, h3 { @apply font-display; text-wrap: balance; }
+  h1, h2, h3 { @apply font-display font-bold; text-wrap: balance; }
   :focus-visible { @apply outline-none ring-2 ring-brand-400 ring-offset-2 ring-offset-bg; }
   input, textarea, button, select { font: inherit; }
-  .num { font-family: Manrope, Tajawal, sans-serif; font-variant-numeric: tabular-nums; }
+  .num { font-family: Manrope, 'IBM Plex Sans Arabic', sans-serif; font-variant-numeric: tabular-nums; }
   [dir='rtl'] .flip-rtl { transform: scaleX(-1); }
   /* Mixed Arabic/English titles: follow the text's own direction (so truncation keeps the beginning), but stay on the page's side. */
   html[dir='rtl'] .bidi { text-align: right; }

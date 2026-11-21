@@ -24,9 +24,9 @@ export default {
         gold: v('gold'),
       },
       fontFamily: {
-        sans: ['Tajawal', 'Manrope', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
-        display: ['"Noto Kufi Arabic"', 'Manrope', 'Tajawal', 'system-ui', 'sans-serif'],
-        latin: ['Manrope', 'system-ui', 'sans-serif'],
+        sans: ['"IBM Plex Sans Arabic"', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
+        display: ['"IBM Plex Sans Arabic"', 'system-ui', 'sans-serif'],
+        latin: ['Manrope', '"IBM Plex Sans Arabic"', 'system-ui', 'sans-serif'],
       },
       borderRadius: { xl: '14px', '2xl': '18px', '3xl': '24px' },
       boxShadow: {

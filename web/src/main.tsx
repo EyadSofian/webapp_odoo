@@ -116,3 +116,6 @@ createRoot(document.getElementById('root')!).render(
     </QueryClientProvider>
   </StrictMode>,
 )
+
+// The launch splash in index.html steps aside once the first screen has painted.
+requestAnimationFrame(() => (window as unknown as { hideSplash?: () => void }).hideSplash?.())

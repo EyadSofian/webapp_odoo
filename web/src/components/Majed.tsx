@@ -10,7 +10,7 @@ import { useI18n } from '../lib/i18n'
 
 type Phase = 'hidden' | 'peek' | 'hello'
 
-export function Majed({ className }: { className?: string }) {
+export function Majed({ className, bubble = true, centered = false, nodKey = 0 }: { className?: string; bubble?: boolean; centered?: boolean; nodKey?: number }) {
   const { t } = useI18n()
   const reduce = useReducedMotion()
   const [phase, setPhase] = useState<Phase>(reduce ? 'peek' : 'hidden')
@@ -36,11 +36,18 @@ export function Majed({ className }: { className?: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reduce])
 
+  // Nods each time the page makes him "say" something.
+  useEffect(() => {
+    if (nodKey > 0) hello()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nodKey])
+
   const up = phase !== 'hidden'
   const greeting = phase === 'hello'
+  const width = centered ? 'w-[124px] left-1/2 -translate-x-1/2' : 'w-[220px]'
 
   return (
-    <div className={`pointer-events-none absolute bottom-full z-20 h-[96px] w-[220px] ${className ?? ''}`}>
+    <div className={`pointer-events-none absolute bottom-full z-20 h-[104px] ${width} ${className ?? ''}`}>
       {/* The clip's bottom is the card's top edge, so he rises from behind the card */}
       <div className="absolute inset-0 overflow-hidden">
         <motion.button
@@ -49,7 +56,7 @@ export function Majed({ className }: { className?: string }) {
           tabIndex={-1}
           onClick={hello}
           onHoverStart={hello}
-          className="pointer-events-auto absolute end-0 top-0 w-[112px] origin-bottom cursor-pointer"
+          className={`pointer-events-auto absolute top-0 origin-bottom cursor-pointer ${centered ? 'start-0 w-[124px]' : 'end-0 w-[112px]'}`}
           initial={false}
           animate={{ y: up ? (greeting ? [10, 2, 10, 4, 10] : 10) : 124, rotate: greeting ? [0, -6, 5, -4, 0] : 0 }}
           transition={up
@@ -62,7 +69,7 @@ export function Majed({ className }: { className?: string }) {
 
       {/* Speech bubble next to his head */}
       <AnimatePresence>
-        {greeting && (
+        {bubble && greeting && (
           <motion.div
             className="absolute end-[104px] top-1 rounded-[14px] border border-line bg-surface px-3 py-2 text-[13px] font-medium leading-5 text-ink shadow-[0_8px_24px_rgb(0_0_0/0.18)]"
             initial={{ opacity: 0, scale: 0.85, y: 6 }}
