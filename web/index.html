@@ -70,13 +70,13 @@
         var start = performance.now();
         var seen = false;
         try { seen = sessionStorage.getItem('engosoft.splash') === '1'; sessionStorage.setItem('engosoft.splash', '1'); } catch (e) {}
-        if (seen) { el.remove(); window.hideSplash = function () {}; return; }
+        if (seen) { el.remove(); window.hideSplash = function () { if (window.setBarColor) window.setBarColor(); }; return; }
         var done = false;
         window.hideSplash = function () {
           if (done) return; done = true;
           setTimeout(function () {
             el.classList.add('out');
-            setTimeout(function () { el.remove(); }, 500);
+            setTimeout(function () { el.remove(); if (window.setBarColor) window.setBarColor(); }, 500);
           }, Math.max(0, 1800 - (performance.now() - start)));
         };
         setTimeout(window.hideSplash, 8000);

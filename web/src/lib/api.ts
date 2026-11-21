@@ -15,9 +15,23 @@ interface StoredSession {
   user: TokenResponse['user']
 }
 
+/**
+ * "Remember me" on: the session lives in localStorage and survives closing the browser (refresh token, 30 days).
+ * Off: it lives in sessionStorage and ends with the browser session.
+ */
+const REMEMBER_KEY = 'engosoft.remember'
+
+export function getRemember(): boolean {
+  try { return localStorage.getItem(REMEMBER_KEY) !== '0' } catch { return true }
+}
+
+export function setRemember(value: boolean) {
+  try { localStorage.setItem(REMEMBER_KEY, value ? '1' : '0') } catch { /* ignore */ }
+}
+
 function read(): StoredSession | null {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
+    const raw = localStorage.getItem(STORAGE_KEY) ?? sessionStorage.getItem(STORAGE_KEY)
     return raw ? (JSON.parse(raw) as StoredSession) : null
   } catch {
     return null
@@ -41,8 +55,14 @@ export const sessionStore = {
   set(next: StoredSession | null) {
     session = next
     try {
-      if (next) localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
-      else localStorage.removeItem(STORAGE_KEY)
+      const keep = getRemember()
+      if (next) {
+        ;(keep ? localStorage : sessionStorage).setItem(STORAGE_KEY, JSON.stringify(next))
+        ;(keep ? sessionStorage : localStorage).removeItem(STORAGE_KEY)
+      } else {
+        localStorage.removeItem(STORAGE_KEY)
+        sessionStorage.removeItem(STORAGE_KEY)
+      }
     } catch {
       /* private mode: keep the session in memory only */
     }
@@ -178,6 +198,8 @@ export async function devLoginAs(partnerId: number) {
 export async function logout() {
   const s = sessionStore.get()
   sessionStore.set(null)
+  // Saved passwords stay saved, but the browser must not sign the person straight back in.
+  await (navigator as unknown as { credentials?: { preventSilentAccess?: () => Promise<void> } }).credentials?.preventSilentAccess?.().catch(() => undefined)
   if (s) {
     await fetch('/api/auth/logout', {
       method: 'POST',

@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Eye, EyeOff, Loader2, Moon, Sun } from 'lucide-react'
+import { ArrowLeft, Check, Eye, EyeOff, Loader2, Moon, Sun } from 'lucide-react'
 import { useReducedMotion } from 'framer-motion'
-import { ApiError, devLoginAs, login } from '../lib/api'
+import { ApiError, devLoginAs, getRemember, login, setRemember } from '../lib/api'
 import { useI18n } from '../lib/i18n'
 import { useTheme } from '../lib/theme'
 import { AnimatePresence, motion } from '../lib/motion'
@@ -18,6 +18,16 @@ const ease = [0.22, 1, 0.36, 1] as const
  */
 
 type Msg = { id: number; from: 'majed' | 'me'; text: string; tone?: 'error' }
+
+/** The browser's saved-password API (Chrome, Edge, Android). Safari and Firefox fall back to normal autofill. */
+type PwCred = { id: string; password?: string; type: string }
+type CredApi = {
+  get: (o: { password: boolean; mediation: 'optional' | 'silent' }) => Promise<PwCred | null>
+  store: (c: unknown) => Promise<unknown>
+}
+const credApi = (): CredApi | null =>
+  typeof window !== 'undefined' && 'PasswordCredential' in window ? (navigator.credentials as unknown as CredApi) : null
+const validEmail = (v: string) => /^\S+@\S+\.\S+$/.test(v.trim())
 type Step = 'email' | 'password'
 
 function TypingDots() {
@@ -70,6 +80,8 @@ export function LoginScreen() {
   const [msgs, setMsgs] = useState<Msg[]>([])
   const [nod, setNod] = useState(0)
   const [devPartner, setDevPartner] = useState('')
+  const [remember, setRememberState] = useState(getRemember)
+  const signingIn = useRef(false)
   const nextId = useRef(1)
   const pwRef = useRef<HTMLInputElement>(null)
   const emailRef = useRef<HTMLInputElement>(null)
@@ -95,6 +107,16 @@ export function LoginScreen() {
       await say(t('chatHello'), undefined, 500)
       if (!alive) return
       await say(t('chatAskEmail'), undefined, 800)
+      if (!alive) return
+      // Saved account in this browser: offer it, and sign in straight away when it is picked.
+      const api = credApi()
+      if (api && getRemember()) {
+        const cred = await api.get({ password: true, mediation: 'optional' }).catch(() => null)
+        if (alive && cred?.type === 'password' && cred.password) {
+          setEmail(cred.id); setPassword(cred.password)
+          void signIn(cred.id, cred.password)
+        }
+      }
     }
     void run()
     return () => { alive = false }
@@ -104,23 +126,25 @@ export function LoginScreen() {
   useEffect(() => { listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: reduce ? 'auto' : 'smooth' }) }, [msgs, typing, reduce])
   useEffect(() => { if (step === 'password') pwRef.current?.focus({ preventScroll: true }) }, [step])
 
-  const submit = async (e: FormEvent) => {
-    e.preventDefault()
-    if (busy || typing) return
-    if (step === 'email') {
-      const value = email.trim()
-      if (!/^\S+@\S+\.\S+$/.test(value)) { await say(t('chatBadEmail'), 'error', 350); return }
-      push('me', value)
-      setStep('password')
-      await say(t('chatAskPassword'))
-      return
-    }
-    if (!password) return
-    push('me', '•'.repeat(Math.min(password.length, 10)))
+  /** Signs in with both values at once (typed, autofilled, or a saved account). */
+  const signIn = async (mail: string, pass: string) => {
+    if (signingIn.current) return
+    signingIn.current = true
+    if (step === 'email') push('me', mail.trim())
+    setStep('password')
+    push('me', '•'.repeat(Math.min(pass.length, 10)))
     setBusy(true)
     setTyping(true)
     try {
-      await login(email.trim(), password)
+      const res = await login(mail.trim(), pass)
+      // Let the browser save (or update) the password, which also enables one-tap sign-in next time.
+      const api = credApi()
+      if (api && getRemember()) {
+        try {
+          const Ctor = (window as unknown as { PasswordCredential: new (d: { id: string; password: string; name?: string }) => unknown }).PasswordCredential
+          await api.store(new Ctor({ id: mail.trim(), password: pass, name: res.user.name }))
+        } catch { /* the person can still save it from the browser's own prompt */ }
+      }
       setTyping(false)
       push('majed', t('chatWelcome'))
       setNod((n) => n + 1)
@@ -133,8 +157,33 @@ export function LoginScreen() {
       pwRef.current?.focus()
     } finally {
       setBusy(false)
+      signingIn.current = false
     }
   }
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault()
+    if (busy || typing) return
+    if (step === 'email') {
+      if (!validEmail(email)) { await say(t('chatBadEmail'), 'error', 350); return }
+      // Autofill filled the password too: no need to ask for it.
+      if (password) { void signIn(email, password); return }
+      push('me', email.trim())
+      setStep('password')
+      await say(t('chatAskPassword'))
+      return
+    }
+    if (!password) return
+    void signIn(email, password)
+  }
+
+  // A password manager filled both fields while we were still on the email step: sign in right away.
+  useEffect(() => {
+    if (step !== 'email' || !password || !validEmail(email) || typing || busy) return
+    const id = window.setTimeout(() => void signIn(email, password), 250)
+    return () => clearTimeout(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [password])
 
   const changeEmail = () => {
     setStep('email'); setPassword('')
@@ -187,28 +236,34 @@ export function LoginScreen() {
 
             {step === 'password' && !busy && (
               <div className="flex flex-wrap gap-2 px-4 pb-3">
+                <button type="button" role="switch" aria-checked={remember} onClick={() => { setRemember(!remember); setRememberState(!remember) }}
+                  className={`${chip} inline-flex items-center gap-2 ${remember ? '!border-brand-500/40 !bg-brand-50 !text-accent' : ''}`}>
+                  <span className={`grid h-4 w-4 place-items-center rounded-[5px] border ${remember ? 'border-brand-500 bg-brand-500 text-white' : 'border-line'}`}>
+                    {remember && <Check className="h-3 w-3" strokeWidth={3} />}
+                  </span>
+                  {t('rememberMe')}
+                </button>
                 <a className={chip} href={`${WEBSITE}/web/reset_password`} target="_blank" rel="noreferrer">{t('forgot')}</a>
                 <button type="button" className={chip} onClick={changeEmail}>{t('chatChangeEmail')}</button>
               </div>
             )}
 
             {/* Composer: one form with both fields; the email stays in the form (hidden) for autofill */}
-            <form onSubmit={submit} className="border-t border-line p-3">
+            <form onSubmit={submit} method="post" autoComplete="on" className="border-t border-line p-3">
               <div className="flex items-center gap-2">
                 <div className="relative flex-1">
-                  <input ref={emailRef} id="email" aria-label={t('email')} type="email" inputMode="email" autoComplete="username" dir="ltr"
+                  <input ref={emailRef} id="email" name="username" aria-label={t('email')} type="email" inputMode="email" autoComplete="username" dir="ltr"
                     value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" tabIndex={step === 'email' ? 0 : -1}
-                    className={step === 'email' ? 'field h-12 rounded-full border-transparent bg-sunken px-5' : 'sr-only'} />
+                    className={step === 'email' ? 'field h-12 rounded-full border-transparent bg-sunken px-5' : 'pointer-events-none absolute h-px w-px opacity-0'} />
+                  {/* Always in the page (hidden on the email step) so autofill can fill both fields in one go */}
+                  <input ref={pwRef} id="password" name="password" aria-label={t('password')} type={show ? 'text' : 'password'} autoComplete="current-password"
+                    value={password} onChange={(e) => setPassword(e.target.value)} placeholder={t('password')} tabIndex={step === 'password' ? 0 : -1}
+                    className={step === 'password' ? 'field h-12 rounded-full border-transparent bg-sunken pe-12 ps-5' : 'pointer-events-none absolute h-px w-px opacity-0'} />
                   {step === 'password' && (
-                    <>
-                      <input ref={pwRef} id="password" aria-label={t('password')} type={show ? 'text' : 'password'} autoComplete="current-password"
-                        value={password} onChange={(e) => setPassword(e.target.value)} placeholder={t('password')}
-                        className="field h-12 rounded-full border-transparent bg-sunken pe-12 ps-5" />
-                      <button type="button" className="absolute inset-y-0 end-2 grid w-9 place-items-center text-muted hover:text-ink" onClick={() => setShow((s) => !s)}
-                        aria-label={show ? t('hidePassword') : t('showPassword')}>
-                        {show ? <EyeOff className="h-[18px] w-[18px]" /> : <Eye className="h-[18px] w-[18px]" />}
-                      </button>
-                    </>
+                    <button type="button" className="absolute inset-y-0 end-2 grid w-9 place-items-center text-muted hover:text-ink" onClick={() => setShow((v) => !v)}
+                      aria-label={show ? t('hidePassword') : t('showPassword')}>
+                      {show ? <EyeOff className="h-[18px] w-[18px]" /> : <Eye className="h-[18px] w-[18px]" />}
+                    </button>
                   )}
                 </div>
                 <button className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-brand-500 text-white transition-[background-color,transform] hover:bg-brand-600 active:scale-95 disabled:opacity-50"

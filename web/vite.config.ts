@@ -26,8 +26,8 @@ export default defineConfig({
         scope: '/',
         display: 'standalone',
         orientation: 'portrait',
-        background_color: '#1656A0',
-        theme_color: '#1656A0',
+        background_color: '#F5F6F8',
+        theme_color: '#F5F6F8',
         categories: ['education'],
         icons: [
           { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },

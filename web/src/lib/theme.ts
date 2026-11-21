@@ -18,8 +18,19 @@ function apply(choice: ThemeChoice) {
   const dark = choice === 'dark' || (choice === 'system' && media().matches)
   document.documentElement.dataset.theme = dark ? 'dark' : 'light'
   document.documentElement.style.colorScheme = dark ? 'dark' : 'light'
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#08111C' : '#1656A0')
+  setBarColor()
 }
+
+/**
+ * The phone's status and navigation bars take this color. They match the page background, so the app has no
+ * colored frame; only while the launch splash is up do they stay Engosoft blue (index.html calls this when it leaves).
+ */
+function setBarColor() {
+  if (document.getElementById('splash')) return
+  const dark = document.documentElement.dataset.theme === 'dark'
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#08111C' : '#F5F6F8')
+}
+if (typeof window !== 'undefined') (window as unknown as { setBarColor?: () => void }).setBarColor = setBarColor
 
 let choice: ThemeChoice = typeof window === 'undefined' ? 'system' : readChoice()
 const listeners = new Set<(c: ThemeChoice) => void>()
