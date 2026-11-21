@@ -22,6 +22,10 @@ export default {
         ok: v('ok'),
         warn: v('warn'),
         gold: v('gold'),
+        green: { DEFAULT: v('green'), ink: v('green-ink'), soft: v('green-soft') },
+        orange: { DEFAULT: v('orange'), ink: v('orange-ink'), soft: v('orange-soft') },
+        sky: { DEFAULT: v('sky'), ink: v('sky-ink'), soft: v('sky-soft') },
+        'blue-soft': v('blue-soft'),
       },
       fontFamily: {
         sans: ['"IBM Plex Sans Arabic"', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
@@ -30,7 +34,7 @@ export default {
       },
       borderRadius: { xl: '14px', '2xl': '18px', '3xl': '24px' },
       boxShadow: {
-        card: '0 1px 2px rgb(var(--shadow) / 0.06), 0 4px 16px -6px rgb(var(--shadow) / 0.12)',
+        card: '0 1px 2px rgb(var(--shadow) / 0.08), 0 6px 18px -8px rgb(var(--shadow) / 0.20)',
         lift: '0 10px 30px -12px rgb(var(--shadow) / 0.35)',
         bar: '0 -1px 0 rgb(var(--line) / 1), 0 -8px 24px -12px rgb(var(--shadow) / 0.18)',
       },

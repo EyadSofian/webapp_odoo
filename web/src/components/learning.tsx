@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import clsx from 'clsx'
-import { CalendarClock, ChevronLeft, FileText, PlayCircle, Video } from 'lucide-react'
+import { CalendarClock, ChevronLeft, FileText, Play, PlayCircle, Video } from 'lucide-react'
 import { ApiError, api } from '../lib/api'
 import { useI18n } from '../lib/i18n'
 import { countdown, formatTime, relativeDay } from '../lib/format'
@@ -52,7 +52,7 @@ export function NextSessionCard({ session, instructor, channelId }: { session: S
         <div className="min-w-0 flex-1">
           <div className="mb-1 flex items-center gap-2">
             {live ? <span className="chip bg-live/10 text-live"><LiveDot className="scale-75" />{t('liveNow')}</span>
-              : <span className="chip bg-brand-50 text-accent"><CalendarClock className="h-3.5 w-3.5" />{relativeDay(session.start!, lang)} · {formatTime(session.start, lang)}</span>}
+              : <span className="chip bg-blue-soft text-accent"><CalendarClock className="h-3.5 w-3.5" />{relativeDay(session.start!, lang)} · {formatTime(session.start, lang)}</span>}
           </div>
           <p className="line-clamp-2 font-display text-[15px] font-bold leading-snug" dir="auto">{session.eventTitle}</p>
           <p className="truncate text-sm text-muted">{t('session')} <span className="num">{session.number}</span>{instructor ? <> · <bdi>{instructor}</bdi></> : null}</p>
@@ -163,20 +163,26 @@ export function LiveCourseItem({ c }: { c: LiveCourseCard }) {
 
 export function RecordedCourseTile({ c, wide }: { c: RecordedCourseCard; wide?: boolean }) {
   const { t } = useI18n()
+  const pct = Math.round(c.completion)
   return (
-    <Link to={`/recorded/${c.channelId}`} className={clsx('card lift group block overflow-hidden active:scale-[0.99]', wide ? 'w-full' : 'w-[260px] shrink-0 snap-start md:w-auto', c.expired && 'opacity-60')}>
-      <CourseCover channelId={c.channelId} title={c.title} className="aspect-video w-full" rounded="rounded-none" />
-      <div className="p-3 md:p-4">
-        <p className="line-clamp-2 min-h-[2.6em] font-display text-[14px] font-bold leading-snug md:text-[16px]" dir="auto">{c.title}</p>
-        <div className="mt-2 flex items-center gap-2">
-          <ProgressBar value={c.completion} className="flex-1" />
-          <span className="num text-[11px] font-bold text-muted">{Math.round(c.completion)}%</span>
-        </div>
-        <p className="mt-1.5 text-[12px] text-muted">
+    <Link to={`/recorded/${c.channelId}`} className={clsx('card lift group block overflow-hidden active:scale-[0.99]', wide ? 'w-full' : 'w-[272px] shrink-0 snap-start md:w-auto', c.expired && 'opacity-60')}>
+      <CourseCover channelId={c.channelId} title={c.title} className="aspect-video w-full" rounded="rounded-none">
+        <span aria-hidden className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black/50 to-transparent" />
+        <span className="absolute bottom-3 start-3 inline-flex items-center gap-1 rounded-full bg-black/30 px-2.5 py-1 text-[12px] font-bold text-white ring-1 ring-inset ring-white/25 backdrop-blur-md">
           <span className="num">{c.lessonsTotal}</span> {t('lessons')}
           {c.totalHours > 0 && <> · <span className="num">{c.totalHours}</span> {t('hours')}</>}
-          {c.expired && <> · <span className="text-warn">{t('expired')}</span></>}
-        </p>
+        </span>
+        <span aria-hidden className="absolute bottom-3 end-3 grid h-10 w-10 place-items-center rounded-full bg-white/25 text-white ring-1 ring-inset ring-white/50 backdrop-blur-md transition-colors group-hover:bg-white/40">
+          <Play className="h-[18px] w-[18px] translate-x-px fill-current" />
+        </span>
+      </CourseCover>
+      <div className="p-4">
+        <p className="line-clamp-2 min-h-[2.75em] font-display text-[15px] font-bold leading-snug md:text-[16px]" dir="auto">{c.title}</p>
+        <div className="mt-3 flex items-center gap-3">
+          <ProgressBar value={c.completion} className="flex-1" tone="sky" />
+          <span className={clsx('num shrink-0 text-[13px] font-bold', pct >= 100 ? 'text-ok' : 'text-sky-ink')}>{pct}%</span>
+        </div>
+        {c.expired && <p className="mt-2 text-[12px] text-warn">{t('expired')}</p>}
       </div>
     </Link>
   )
