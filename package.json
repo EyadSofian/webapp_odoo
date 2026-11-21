@@ -1,0 +1,8 @@
+{
+  "name": "engosoft-learn-infra",
+  "private": true,
+  "description": "Railway Infrastructure as Code for this repo (.railway/railway.ts). The app itself lives in web/ and backend/.",
+  "devDependencies": {
+    "railway": "3.17.0"
+  }
+}
