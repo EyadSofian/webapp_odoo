@@ -43,9 +43,10 @@ export function ProfileScreen() {
   const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
 
   return (
-    <div className="mx-auto max-w-3xl md:px-4">
+    <div className="mx-auto max-w-6xl">
       <TopBar title={t('profile')} />
-      <div className="space-y-5 px-4 py-4">
+      <div className="grid gap-5 px-4 py-4 md:px-8 md:py-6 lg:grid-cols-[340px_minmax(0,1fr)] lg:items-start lg:gap-8">
+        <div className="space-y-5 lg:sticky lg:top-24">
         <div className="card flex items-center gap-4 p-4">
           <Avatar partnerId={user?.partnerId} name={user?.name ?? ''} size={60} />
           <div className="min-w-0 flex-1">
@@ -64,7 +65,9 @@ export function ProfileScreen() {
           <span className="flex-1 font-bold">{t('certificates')}</span>
           <ChevronLeft className="h-5 w-5 text-muted ltr:rotate-180" />
         </Link>
+        </div>
 
+        <div className="space-y-5">
         <section className="card divide-y divide-line/70">
           <h2 className="px-4 pb-2 pt-4 text-sm font-bold text-muted">{t('notificationsSettings')}</h2>
           <div className="flex items-center gap-3 px-4 py-3">
@@ -139,6 +142,7 @@ export function ProfileScreen() {
         </section>
 
         <p className="pb-4 text-center text-xs text-muted">Engosoft Learn · v1.0</p>
+        </div>
       </div>
     </div>
   )

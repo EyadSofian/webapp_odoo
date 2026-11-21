@@ -22,7 +22,7 @@ export function CoursesScreen() {
   const expired = live.data?.filter((c) => c.expired) ?? []
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <div className="mx-auto max-w-[1400px]">
       <TopBar title={t('courses')} actions={
         <a href={WEBSITE} target="_blank" rel="noreferrer" className="btn-ghost h-9 px-3 text-sm text-accent"><Plus className="h-4 w-4" />{t('browseMore')}</a>
       } />
@@ -40,11 +40,11 @@ export function CoursesScreen() {
             ? <EmptyState icon={<CalendarDays className="h-7 w-7" />} title={t('liveCourses')} body={t('chatsEmpty')} />
             : (
               <div className="space-y-6">
-                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{active.map((c) => <LiveCourseItem key={c.eventId} c={c} />)}</div>
+                <div className="grid gap-3 md:grid-cols-2 md:gap-5 lg:grid-cols-3 2xl:grid-cols-4">{active.map((c) => <LiveCourseItem key={c.eventId} c={c} />)}</div>
                 {expired.length > 0 && (
                   <section>
-                    <h2 className="mb-2 text-sm font-bold text-muted">{t('expired')}</h2>
-                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{expired.map((c) => <LiveCourseItem key={c.eventId} c={c} />)}</div>
+                    <h2 className="mb-3 text-sm font-bold text-muted md:text-base">{t('expired')}</h2>
+                    <div className="grid gap-3 md:grid-cols-2 md:gap-5 lg:grid-cols-3 2xl:grid-cols-4">{expired.map((c) => <LiveCourseItem key={c.eventId} c={c} />)}</div>
                   </section>
                 )}
               </div>
@@ -55,7 +55,7 @@ export function CoursesScreen() {
           recorded.data.length === 0
             ? <EmptyState image="/art/empty-courses.webp" icon={<BookOpen className="h-7 w-7" />} title={t('recordedCourses')}
                 action={<a className="btn-primary" href={WEBSITE} target="_blank" rel="noreferrer">{t('browseWebsite')}</a>} />
-            : <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">{recorded.data.map((c) => <RecordedCourseTile key={c.channelId} c={c} wide />)}</div>
+            : <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-5 lg:grid-cols-3 2xl:grid-cols-4">{recorded.data.map((c) => <RecordedCourseTile key={c.channelId} c={c} wide />)}</div>
         )}
       </div>
     </div>

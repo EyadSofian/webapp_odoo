@@ -2,13 +2,14 @@ import { Suspense, useEffect } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import clsx from 'clsx'
-import { Bell, BookOpen, ExternalLink, Home, MessagesSquare, UserRound } from 'lucide-react'
+import { Bell, BookOpen, ExternalLink, Home, MessagesSquare, Moon, Sun, UserRound } from 'lucide-react'
 import { api } from '../lib/api'
 import { useAuth } from '../lib/auth'
 import { ensureHub, onHub } from '../lib/hub'
 import { useI18n, type Key } from '../lib/i18n'
 import { PageTransition, ScrollToTop, motion } from '../lib/motion'
 import { setBadge, syncSubscription } from '../lib/push'
+import { useTheme } from '../lib/theme'
 import { Avatar, Logo, useToast } from './ui'
 
 interface Badges { messages: number; notifications: number }
@@ -82,47 +83,53 @@ function RealtimeBridge() {
 
 function SideNav({ badges }: { badges?: Badges }) {
   const { t, lang, setLang } = useI18n()
+  const { resolved, setTheme } = useTheme()
   const { user } = useAuth()
   const { pathname } = useLocation()
   const active = (to: string) => (to === '/' ? pathname === '/' : pathname.startsWith(to))
+  const tool = 'grid h-9 min-w-9 place-items-center rounded-[10px] px-2 text-[13px] font-semibold text-muted transition-colors hover:bg-sunken hover:text-ink'
   return (
-    <aside className="sticky top-0 hidden h-dvh w-[264px] shrink-0 flex-col border-e border-line bg-surface md:flex">
-      <div className="px-6 pb-6 pt-7">
-        <Logo className="h-9 w-auto" />
+    <aside className="sticky top-0 hidden h-dvh w-[260px] shrink-0 flex-col border-e border-line bg-surface md:flex">
+      <div className="px-6 pb-8 pt-7">
+        <Logo className="h-10 w-auto" />
       </div>
-      <nav className="flex flex-col gap-1 px-3">
-        {tabs.map(({ to, icon: Icon, label, badge }) => (
-          <NavLink key={to} to={to} end={to === '/'} className="relative flex h-12 items-center gap-3 rounded-2xl px-4 font-bold">
-            {active(to) && (
-              <motion.span layoutId="nav-pill" className="absolute inset-0 rounded-2xl bg-brand-50" transition={{ type: 'spring', stiffness: 420, damping: 36 }} />
-            )}
-            <Icon className={clsx('relative h-5 w-5 transition', active(to) ? 'text-accent' : 'text-muted')} strokeWidth={active(to) ? 2.4 : 2} />
-            <span className={clsx('relative transition', active(to) ? 'text-accent' : 'text-muted hover:text-ink')}>{t(label)}</span>
-            {badge && badges?.[badge] ? <span className="num relative ms-auto rounded-full bg-live px-2 text-xs leading-5 text-white">{badges[badge]}</span> : null}
-          </NavLink>
-        ))}
+
+      <nav className="flex flex-col gap-1 px-3" aria-label={t('home')}>
+        {tabs.map(({ to, icon: Icon, label, badge }) => {
+          const on = active(to)
+          return (
+            <NavLink key={to} to={to} end={to === '/'}
+              className={clsx('relative flex h-11 items-center gap-3 rounded-xl px-3 text-[15px] font-semibold transition-colors', on ? 'text-accent' : 'text-muted hover:bg-sunken hover:text-ink')}>
+              {on && <motion.span layoutId="nav-pill" className="absolute inset-0 rounded-xl bg-brand-50" transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }} />}
+              {on && <span className="absolute inset-y-2.5 start-0 w-[3px] rounded-full bg-accent" />}
+              <Icon className="relative h-5 w-5" strokeWidth={on ? 2.2 : 1.9} />
+              <span className="relative flex-1">{t(label)}</span>
+              {badge && badges?.[badge] ? <span className="num relative min-w-[22px] rounded-full bg-live px-1.5 text-center text-xs font-bold leading-[22px] text-white">{badges[badge]}</span> : null}
+            </NavLink>
+          )
+        })}
       </nav>
 
-      <div className="mx-4 mt-8 overflow-hidden rounded-3xl bg-brand-900 text-white">
-        <img src="/art/empty-courses.webp" alt="" className="h-24 w-full object-cover opacity-80" />
-        <div className="p-4">
-          <p className="font-display text-sm font-bold">{lang === 'ar' ? 'هل تريد مواصلة مسارك؟' : 'Grow your track'}</p>
-          <p className="mt-1 text-xs text-white/70">{lang === 'ar' ? 'دبلومات ودورات جديدة على موقع إنجوسوفت.' : 'New diplomas and courses on engosoft.com.'}</p>
-          <a href="https://engosoft.com" target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-brand-200 hover:text-white">
-            engosoft.com <ExternalLink className="h-3.5 w-3.5" />
-          </a>
-        </div>
-      </div>
+      <a href="https://engosoft.com" target="_blank" rel="noreferrer"
+        className="mx-3 mt-6 flex items-center gap-3 rounded-xl border border-line px-3 py-3 text-[13px] text-muted transition-colors hover:bg-sunken hover:text-ink">
+        <ExternalLink className="h-4 w-4 shrink-0" />
+        <span className="flex-1 leading-5">{lang === 'ar' ? 'دبلومات ودورات جديدة على موقع إنجوسوفت' : 'New diplomas and courses on engosoft.com'}</span>
+      </a>
 
-      <div className="mt-auto flex items-center gap-3 border-t border-line px-5 py-4">
-        <Avatar partnerId={user?.partnerId} name={user?.name ?? ''} size={40} />
-        <NavLink to="/profile" className="min-w-0 flex-1">
-          <p className="truncate text-sm font-bold">{user?.name}</p>
-          <p className="text-xs text-muted">{user?.kind === 'student' ? t('roleStudent') : t('roleInstructor')}</p>
+      <div className="mt-auto border-t border-line px-4 pb-4 pt-3">
+        <div className="mb-3 flex items-center justify-between">
+          <button className={tool} onClick={() => setTheme(resolved === 'dark' ? 'light' : 'dark')} aria-label={t('appearance')} title={t('appearance')}>
+            {resolved === 'dark' ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
+          </button>
+          <button className={tool} onClick={() => setLang(lang === 'ar' ? 'en' : 'ar')}>{lang === 'ar' ? 'English' : 'العربية'}</button>
+        </div>
+        <NavLink to="/profile" className="flex items-center gap-3 rounded-xl p-2 transition-colors hover:bg-sunken">
+          <Avatar partnerId={user?.partnerId} name={user?.name ?? ''} size={40} />
+          <span className="min-w-0 flex-1">
+            <span className="line-clamp-2 text-[14px] font-semibold leading-5">{user?.name}</span>
+            <span className="block text-xs text-muted">{user?.kind === 'student' ? t('roleStudent') : user?.kind === 'admin' ? t('roleAdmin') : t('roleInstructor')}</span>
+          </span>
         </NavLink>
-        <button className="rounded-full border border-line px-2.5 py-1 text-xs font-bold text-muted hover:text-ink" onClick={() => setLang(lang === 'ar' ? 'en' : 'ar')}>
-          {lang === 'ar' ? 'EN' : 'ع'}
-        </button>
       </div>
     </aside>
   )

@@ -96,13 +96,14 @@ public sealed class ChatService(
             })
             .ToListAsync(ct);
 
+        var voice = await VoiceMessageIdsAsync(rows.Where(r => r.Last is not null).Select(r => r.Last!), ct);
         return rows
             // A closed group with nothing in it has nothing to read: leave it out of the list.
             .Where(r => r.Room!.Status == RoomStatus.Open || r.Last is not null)
             .Select(r => new RoomListItem(r.Room!.Id, r.Room.Kind.ToString().ToLowerInvariant(),
                 r.Room.Kind == RoomKind.Question && user.IsStaff && r.Owner is not null ? $"{r.Room.Title} · {r.Owner}" : r.Room.Title,
                 r.Room.Code, r.Room.OdooEventId, r.Room.CourseChannelId, r.Room.Status.ToString().ToLowerInvariant(), r.Room.AnnouncementOnly,
-                r.Role.ToString().ToLowerInvariant(), r.Unread, r.Last is null ? null : Preview(r.Last), r.Room.LastMessageAt ?? r.Room.CreatedAt, r.Count))
+                r.Role.ToString().ToLowerInvariant(), r.Unread, r.Last is null ? null : Preview(r.Last, voice.Contains(r.Last.Id)), r.Room.LastMessageAt ?? r.Room.CreatedAt, r.Count))
             .OrderByDescending(r => r.UnreadCount > 0)
             .ThenBy(r => r.Status != "open")
             .ThenByDescending(r => r.LastMessageAt)
@@ -237,7 +238,8 @@ public sealed class ChatService(
     private async Task NotifyMembersAsync(ChatRoom room, ChatMessage message, ChatMessage? replyTarget, CancellationToken ct)
     {
         var members = await db.Members.Where(x => x.RoomId == room.Id && x.RemovedAt == null).ToListAsync(ct);
-        var preview = Preview(message);
+        var isVoice = (await VoiceMessageIdsAsync([message], ct)).Contains(message.Id);
+        var preview = Preview(message, isVoice);
         var pushTo = new List<int>();
         foreach (var r in members.Where(x => x.PartnerId != message.SenderPartnerId))
         {
@@ -252,7 +254,7 @@ public sealed class ChatService(
             MemberRole.Instructor => $"م. {message.SenderName}",
             _ => message.SenderName,
         };
-        var text = message.DeletedAt is null && message.Body.Length > 0 ? message.Body : "أرسل ملفًا";
+        var text = message.DeletedAt is null && message.Body.Length > 0 ? message.Body : isVoice ? "أرسل رسالة صوتية" : "أرسل ملفًا";
         notifications.PushOnly(pushTo, new PushMessage(
             Title: room.Kind == RoomKind.Question ? $"سؤال خاص · {room.Title}" : room.Title,
             Body: $"{who}: {Truncate(text, 140)}",
@@ -503,9 +505,21 @@ public sealed class ChatService(
         }).ToList();
     }
 
-    private static MessagePreview Preview(ChatMessage m) =>
+    /** Messages with no text whose attachment is audio: voice notes recorded in the app. */
+    private async Task<HashSet<long>> VoiceMessageIdsAsync(IEnumerable<ChatMessage> messages, CancellationToken ct)
+    {
+        var candidates = messages.Where(m => m.Body.Length == 0 && m.AttachmentIds is not null && m.DeletedAt is null)
+            .Select(m => (m.Id, First: Guid.TryParse(m.AttachmentIds!.Split(',')[0], out var g) ? g : Guid.Empty))
+            .Where(x => x.First != Guid.Empty).ToList();
+        if (candidates.Count == 0) return [];
+        var ids = candidates.Select(x => x.First).ToList();
+        var audio = (await db.Attachments.Where(a => ids.Contains(a.Id) && a.ContentType.StartsWith("audio/")).Select(a => a.Id).ToListAsync(ct)).ToHashSet();
+        return candidates.Where(x => audio.Contains(x.First)).Select(x => x.Id).ToHashSet();
+    }
+
+    private static MessagePreview Preview(ChatMessage m, bool voice = false) =>
         new(m.Id, m.SenderName, m.SenderRole.ToString().ToLowerInvariant(),
-            m.DeletedAt is not null ? "رسالة محذوفة" : m.Body.Length > 0 ? Truncate(m.Body, 100) : "📎 ملف",
+            m.DeletedAt is not null ? "رسالة محذوفة" : m.Body.Length > 0 ? Truncate(m.Body, 100) : voice ? "🎤 رسالة صوتية" : "📎 ملف",
             DateTime.SpecifyKind(m.CreatedAt, DateTimeKind.Utc));
 
     private static string Truncate(string s, int max) => s.Length <= max ? s : s[..max] + "…";

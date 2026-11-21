@@ -127,28 +127,35 @@ export function LiveCourseItem({ c }: { c: LiveCourseCard }) {
   const { t, lang } = useI18n()
   const done = Math.min(c.sessionsTotal, c.nextSession ? c.nextSession.number - 1 : c.sessionsTotal)
   const pct = c.sessionsTotal ? (done / c.sessionsTotal) * 100 : 0
+  const next = !c.expired && c.nextSession
+    ? (c.nextSession.status === 'live' ? t('liveNow') : `${relativeDay(c.nextSession.start!, lang)} · ${formatTime(c.nextSession.start, lang)}`)
+    : null
   return (
-    <Link to={`/live/${c.eventId}`} className={clsx('card lift group flex gap-3 p-3 active:scale-[0.99]', c.expired && 'opacity-60')}>
-      <CourseCover eventId={c.eventId} title={c.title} className="h-[76px] w-[76px] shrink-0" rounded="rounded-xl" />
-      <div className="min-w-0 flex-1">
+    <Link to={`/live/${c.eventId}`}
+      className={clsx('card lift group flex h-full gap-3 p-3 active:scale-[0.99] md:flex-col md:gap-0 md:overflow-hidden md:p-0', c.expired && 'opacity-60')}>
+      <CourseCover eventId={c.eventId} title={c.title} className="h-[76px] w-[76px] shrink-0 md:aspect-video md:h-auto md:w-full" rounded="rounded-xl md:rounded-none">
+        {next && (
+          <span className={clsx('absolute bottom-3 start-3 hidden items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-bold shadow-card md:inline-flex',
+            c.nextSession?.status === 'live' ? 'bg-live text-white' : 'bg-surface/95 text-ink')}>
+            <CalendarClock className="h-3.5 w-3.5" />{next}
+          </span>
+        )}
+      </CourseCover>
+      <div className="flex min-w-0 flex-1 flex-col md:p-4">
         <div className="flex items-start justify-between gap-2">
-          <p className="line-clamp-2 font-display text-[15px] font-bold leading-snug" dir="auto">{c.title}</p>
-          <ChevronLeft className="mt-1 h-4 w-4 shrink-0 text-muted ltr:rotate-180" />
+          <p className="line-clamp-2 font-display text-[15px] font-bold leading-snug md:min-h-[2.75em] md:text-[16px]" dir="auto">{c.title}</p>
+          <ChevronLeft className="mt-1 h-4 w-4 shrink-0 text-muted ltr:rotate-180 md:hidden" />
         </div>
-        <p className="truncate text-xs text-muted">{c.instructor?.name ?? ''}{c.instructor ? ' · ' : ''}{modeLabel(c.mode, t)}</p>
+        <p className="truncate text-xs text-muted md:mt-1 md:text-[13px]">{c.instructor?.name ?? ''}{c.instructor ? ' · ' : ''}{modeLabel(c.mode, t)}</p>
         {c.expired ? (
-          <span className="chip mt-2 bg-warn/10 text-warn">{t('expired')}</span>
+          <span className="chip mt-2 w-fit bg-warn/10 text-warn">{t('expired')}</span>
         ) : (
-          <div className="mt-2 flex items-center gap-2">
+          <div className="mt-2 flex items-center gap-2 md:mt-auto md:pt-4">
             <ProgressBar value={pct} className="flex-1" />
-            <span className="num shrink-0 text-[11px] text-muted">{done}/{c.sessionsTotal}</span>
+            <span className="num shrink-0 text-[11px] text-muted md:text-xs">{done}/{c.sessionsTotal}</span>
           </div>
         )}
-        {!c.expired && c.nextSession && (
-          <p className="mt-1.5 truncate text-[12px] font-bold text-accent">
-            {c.nextSession.status === 'live' ? t('liveNow') : `${relativeDay(c.nextSession.start!, lang)} · ${formatTime(c.nextSession.start, lang)}`}
-          </p>
-        )}
+        {next && <p className="mt-1.5 truncate text-[12px] font-bold text-accent md:hidden">{next}</p>}
       </div>
     </Link>
   )
@@ -159,8 +166,8 @@ export function RecordedCourseTile({ c, wide }: { c: RecordedCourseCard; wide?: 
   return (
     <Link to={`/recorded/${c.channelId}`} className={clsx('card lift group block overflow-hidden active:scale-[0.99]', wide ? 'w-full' : 'w-[260px] shrink-0 snap-start md:w-auto', c.expired && 'opacity-60')}>
       <CourseCover channelId={c.channelId} title={c.title} className="aspect-video w-full" rounded="rounded-none" />
-      <div className="p-3">
-        <p className="line-clamp-2 min-h-[2.6em] font-display text-[14px] font-bold leading-snug" dir="auto">{c.title}</p>
+      <div className="p-3 md:p-4">
+        <p className="line-clamp-2 min-h-[2.6em] font-display text-[14px] font-bold leading-snug md:text-[16px]" dir="auto">{c.title}</p>
         <div className="mt-2 flex items-center gap-2">
           <ProgressBar value={c.completion} className="flex-1" />
           <span className="num text-[11px] font-bold text-muted">{Math.round(c.completion)}%</span>

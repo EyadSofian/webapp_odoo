@@ -13,6 +13,7 @@ import { useI18n } from '../lib/i18n'
 import { dayKey, fileSize, formatTime, relativeDay } from '../lib/format'
 import type { MemberDto, MessageDto, RoomDetail } from '../lib/types'
 import { Avatar, CourseCover, ErrorState, RoleBadge, Sheet, Skeleton, TopBar, useAuthedImage, useToast } from '../components/ui'
+import { MentionList, MicButton, RichBody, VoicePlayer, VoiceRecorder, mentionQuery } from '../components/chatExtras'
 
 const REACTIONS = ['👍', '❤️', '😂', '😮', '🙏', '✅']
 const isStaffRole = (r: string) => r !== 'student'
@@ -57,6 +58,18 @@ export function ChatRoomScreen() {
   lastIdRef.current = lastId
 
   const staff = room.data ? isStaffRole(room.data.myRole) : false
+  const members = useQuery({ queryKey: ['members', roomId], queryFn: () => api<MemberDto[]>(`/api/chats/${roomId}/members`), enabled: !!room.data, staleTime: 5 * 60_000 })
+  const memberNames = useMemo(() => (members.data ?? []).map((m) => m.name), [members.data])
+  const myName = useMemo(() => members.data?.find((m) => m.partnerId === me)?.name ?? user?.name ?? '', [members.data, me, user?.name])
+  const [flash, setFlash] = useState<number | null>(null)
+  /** Scroll to the quoted message and highlight it for a moment. */
+  const jumpTo = (id: number) => {
+    const el = document.getElementById(`m-${id}`)
+    if (!el) { toast({ kind: 'info', text: t('replyNotLoaded') }); return }
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    setFlash(id)
+    window.setTimeout(() => setFlash((f) => (f === id ? null : f)), 1600)
+  }
   const canWrite = room.data?.status === 'open' && (staff || !room.data.announcementOnly)
     && !(room.data.mutedUntil && new Date(room.data.mutedUntil) > new Date())
 
@@ -240,7 +253,9 @@ export function ChatRoomScreen() {
             <div key={m.id}>
               {newDay && <p className="num mx-auto my-3 w-fit rounded-full bg-surface px-3 py-1 text-[11px] font-bold text-muted shadow-card">{relativeDay(m.createdAt, lang)}</p>}
               <Bubble m={m} mine={m.sender.partnerId === me} grouped={!!grouped} onMenu={() => setMenuFor(m)}
-                onReact={(emoji) => act(() => chatHub.react(m.id, emoji))} me={me} />
+                onReact={(emoji) => act(() => chatHub.react(m.id, emoji))} me={me}
+                names={memberNames} myName={myName} flash={flash === m.id} onJump={jumpTo}
+                onReply={canWrite && !m.deleted ? () => setReplyTo(m) : undefined} />
             </div>
           )
         })}
@@ -248,7 +263,7 @@ export function ChatRoomScreen() {
         {pending.map((p) => (
           <div key={p.clientId} className="mb-1 flex justify-end">
             <div className={clsx('max-w-[80%] rounded-2xl rounded-ee-md px-3 py-2 text-[15px] shadow-card', p.failed ? 'bg-live/10 text-ink' : 'bg-brand-500/85 text-white')}>
-              {p.attachments.map((a) => <p key={a.id} className="text-sm opacity-90">📎 {a.name}</p>)}
+              {p.attachments.map((a) => <p key={a.id} className="text-sm opacity-90">{a.contentType.startsWith('audio/') ? `🎤 ${t('voiceNote')}` : `📎 ${a.name}`}</p>)}
               <p className="whitespace-pre-wrap break-words" dir="auto">{p.body}</p>
               {p.failed ? (
                 <div className="mt-1 flex items-center gap-3 text-xs">
@@ -270,7 +285,7 @@ export function ChatRoomScreen() {
 
       {/* composer */}
       {room.data && (canWrite
-        ? <Composer roomId={roomId} replyTo={replyTo} onCancelReply={() => setReplyTo(null)}
+        ? <Composer roomId={roomId} replyTo={replyTo} onCancelReply={() => setReplyTo(null)} members={(members.data ?? []).filter((m) => m.partnerId !== me)}
             onSend={(body, att) => { void send(body, att, replyTo); setReplyTo(null) }} />
         : <div className="flex items-center justify-center gap-2 border-t border-line bg-surface px-4 py-4 pb-[calc(16px+var(--safe-bottom))] text-center text-sm text-muted">
             {room.data.status !== 'open' ? <><Lock className="h-4 w-4" />{t('readOnly')}</>
@@ -321,15 +336,46 @@ function MenuItem({ icon: Icon, label, onClick, danger, hidden }: { icon: typeof
 
 // ------------------------------------------------------------------ bubble
 
-function Bubble({ m, mine, grouped, onMenu, onReact, me }: { m: MessageDto; mine: boolean; grouped: boolean; onMenu: () => void; onReact: (e: string) => void; me: number }) {
+function Bubble({ m, mine, grouped, onMenu, onReact, me, names, myName, flash, onJump, onReply }: {
+  m: MessageDto; mine: boolean; grouped: boolean; onMenu: () => void; onReact: (e: string) => void; me: number
+  names: string[]; myName: string; flash: boolean; onJump: (id: number) => void; onReply?: () => void
+}) {
   const { t, lang } = useI18n()
   const pressTimer = useRef<number>()
   const staff = isStaffRole(m.sender.role)
-  const startPress = () => { pressTimer.current = window.setTimeout(onMenu, 420) }
-  const endPress = () => window.clearTimeout(pressTimer.current)
+  // Swipe sideways to reply (phones); a long press opens the menu.
+  const touch = useRef<{ x: number; y: number; dx: number; locked: boolean } | null>(null)
+  const [dx, setDx] = useState(0)
+  const startPress = (e: React.TouchEvent) => {
+    const p = e.touches[0]
+    touch.current = { x: p.clientX, y: p.clientY, dx: 0, locked: false }
+    pressTimer.current = window.setTimeout(onMenu, 420)
+  }
+  const movePress = (e: React.TouchEvent) => {
+    const tc = touch.current
+    if (!tc) return
+    const p = e.touches[0]
+    const mx = p.clientX - tc.x, my = p.clientY - tc.y
+    if (Math.abs(mx) > 6 || Math.abs(my) > 6) window.clearTimeout(pressTimer.current)
+    if (!onReply || tc.locked || Math.abs(my) > Math.abs(mx)) { if (Math.abs(my) > 10) tc.locked = true; return }
+    tc.dx = Math.max(-72, Math.min(72, mx))
+    setDx(tc.dx)
+  }
+  const endPress = () => {
+    window.clearTimeout(pressTimer.current)
+    if (onReply && Math.abs(touch.current?.dx ?? 0) >= 56) { onReply(); navigator.vibrate?.(12) }
+    touch.current = null
+    setDx(0)
+  }
 
   return (
-    <div id={`m-${m.id}`} className={clsx('group flex items-end gap-2', mine ? 'justify-end' : 'justify-start', grouped ? 'mt-0.5' : 'mt-3')}>
+    <div id={`m-${m.id}`} className={clsx('group relative flex items-end gap-2 rounded-2xl transition-colors duration-500', mine ? 'justify-end' : 'justify-start', grouped ? 'mt-0.5' : 'mt-3', flash && 'bg-brand-500/10')}>
+      {dx !== 0 && (
+        <span className="pointer-events-none absolute top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-full bg-surface text-accent shadow-card"
+          style={{ [dx > 0 ? 'left' : 'right']: 4, opacity: Math.min(1, Math.abs(dx) / 56) }}>
+          <Reply className="h-4 w-4" />
+        </span>
+      )}
       {!mine && <span className="w-8 shrink-0">{!grouped && <Avatar partnerId={m.sender.partnerId} name={m.sender.name} size={32} />}</span>}
       <div
         className={clsx(
@@ -339,8 +385,9 @@ function Bubble({ m, mine, grouped, onMenu, onReact, me }: { m: MessageDto; mine
             : 'rounded-es-md bg-surface text-ink',
           m.isAnswer && 'ring-2 ring-ok/60',
         )}
+        style={dx ? { transform: `translateX(${dx}px)` } : undefined}
         onContextMenu={(e) => { e.preventDefault(); onMenu() }}
-        onTouchStart={startPress} onTouchEnd={endPress} onTouchMove={endPress}
+        onTouchStart={startPress} onTouchEnd={endPress} onTouchMove={movePress} onTouchCancel={endPress}
       >
         {!mine && !grouped && (
           <div className="mb-0.5 flex items-center gap-1.5">
@@ -350,17 +397,18 @@ function Bubble({ m, mine, grouped, onMenu, onReact, me }: { m: MessageDto; mine
         )}
         {m.isAnswer && <p className="mb-1 flex items-center gap-1 text-[11px] font-bold text-ok"><CheckCheck className="h-3.5 w-3.5" />{t('instructorAnswer')}</p>}
         {m.replyTo && (
-          <div className={clsx('mb-1.5 rounded-lg border-s-4 px-2 py-1 text-[13px]', mine ? 'border-white/60 bg-white/15' : 'border-brand-400 bg-sunken')}>
+          <button type="button" onClick={() => onJump(m.replyTo!.id)}
+            className={clsx('mb-1.5 block w-full rounded-lg border-s-4 px-2 py-1 text-start text-[13px] transition-colors', mine ? 'border-white/60 bg-white/15 hover:bg-white/25' : 'border-brand-400 bg-sunken hover:bg-brand-50')}>
             <p className="font-bold">{m.replyTo.senderName}</p>
             <p className="line-clamp-2 opacity-80" dir="auto">{m.replyTo.snippet}</p>
-          </div>
+          </button>
         )}
         {m.deleted ? (
           <p className="italic opacity-70">{t('messageDeleted')}</p>
         ) : (
           <>
             {m.attachments.map((a) => <AttachmentView key={a.id} a={a} mine={mine} />)}
-            {m.body && <p className="whitespace-pre-wrap break-words leading-relaxed" dir="auto">{linkify(m.body)}</p>}
+            {m.body && <p className="whitespace-pre-wrap break-words leading-relaxed" dir="auto"><RichBody text={m.body} names={names} myName={myName} mine={mine} /></p>}
           </>
         )}
         <div className="mt-0.5 flex items-center justify-end gap-1">
@@ -378,32 +426,32 @@ function Bubble({ m, mine, grouped, onMenu, onReact, me }: { m: MessageDto; mine
           </div>
         )}
       </div>
-      <button onClick={onMenu} className="hidden h-7 w-7 shrink-0 place-items-center rounded-full text-muted opacity-0 transition hover:bg-sunken group-hover:opacity-100 md:grid" aria-label="actions">
-        <MoreVertical className="h-4 w-4" />
-      </button>
+      <div className={clsx('hidden shrink-0 items-center gap-0.5 self-center opacity-0 transition-opacity group-hover:opacity-100 md:flex', mine && '-order-1')}>
+        {onReply && (
+          <button onClick={onReply} className="grid h-8 w-8 place-items-center rounded-full text-muted hover:bg-sunken hover:text-ink" aria-label={t('reply')} title={t('reply')}>
+            <Reply className="h-4 w-4" />
+          </button>
+        )}
+        <button onClick={onMenu} className="grid h-8 w-8 place-items-center rounded-full text-muted hover:bg-sunken hover:text-ink" aria-label="actions">
+          <MoreVertical className="h-4 w-4" />
+        </button>
+      </div>
       {m.reactions.length > 0 && <span className="block h-3" />}
     </div>
   )
 }
 
-function linkify(text: string) {
-  const parts = text.split(/(https?:\/\/[^\s]+)/g)
-  return parts.map((p, i) => (/^https?:\/\//.test(p)
-    ? <a key={i} href={p} target="_blank" rel="noreferrer noopener" className="underline underline-offset-2" dir="ltr">{p}</a>
-    : p))
-}
-
 function AttachmentView({ a, mine }: { a: MessageDto['attachments'][number]; mine: boolean }) {
   const isImage = a.contentType.startsWith('image/')
   const isAudio = a.contentType.startsWith('audio/')
-  const url = useAuthedImage(isImage || isAudio ? `/api/chats/attachments/${a.id}` : null)
+  const url = useAuthedImage(isImage ? `/api/chats/attachments/${a.id}` : null)
   const toast = useToast()
   if (isImage) {
     return url
       ? <a href={url} target="_blank" rel="noreferrer"><img src={url} alt={a.name} className="mb-1 max-h-72 w-full rounded-xl object-cover" /></a>
       : <Skeleton className="mb-1 h-40 w-56" />
   }
-  if (isAudio) return url ? <audio controls src={url} className="mb-1 w-60 max-w-full" /> : <Skeleton className="mb-1 h-10 w-56" />
+  if (isAudio) return <VoicePlayer id={a.id} mine={mine} />
   return (
     <button className={clsx('mb-1 flex w-full min-w-[200px] items-center gap-2 rounded-xl p-2 text-start', mine ? 'bg-white/15' : 'bg-sunken')}
       onClick={async () => {
@@ -424,18 +472,31 @@ function AttachmentView({ a, mine }: { a: MessageDto['attachments'][number]; min
 
 // ------------------------------------------------------------------ composer
 
-function Composer({ roomId, replyTo, onCancelReply, onSend }: { roomId: string; replyTo: MessageDto | null; onCancelReply: () => void; onSend: (body: string, attachments: Uploaded[]) => void }) {
+function Composer({ roomId, replyTo, onCancelReply, onSend, members }: {
+  roomId: string; replyTo: MessageDto | null; onCancelReply: () => void; onSend: (body: string, attachments: Uploaded[]) => void; members: MemberDto[]
+}) {
   const { t } = useI18n()
   const toast = useToast()
   const [text, setText] = useState('')
   const [files, setFiles] = useState<Uploaded[]>([])
   const [uploading, setUploading] = useState(false)
+  const [recording, setRecording] = useState(false)
+  const [mention, setMention] = useState<{ start: number; query: string } | null>(null)
+  const [active, setActive] = useState(0)
   const area = useRef<HTMLTextAreaElement>(null)
   const lastTyping = useRef(0)
   const fileInput = useRef<HTMLInputElement>(null)
   const touch = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
+  const canRecord = typeof window !== 'undefined' && !!navigator.mediaDevices?.getUserMedia && typeof MediaRecorder !== 'undefined'
+
+  const suggestions = useMemo(() => {
+    if (!mention) return []
+    const q = mention.query.toLowerCase()
+    return members.filter((m) => m.name.toLowerCase().includes(q)).slice(0, 6)
+  }, [mention, members])
 
   useEffect(() => { if (replyTo) area.current?.focus() }, [replyTo])
+  useEffect(() => { setActive(0) }, [mention?.query])
   useLayoutEffect(() => {
     const el = area.current
     if (!el) return
@@ -447,17 +508,41 @@ function Composer({ roomId, replyTo, onCancelReply, onSend }: { roomId: string; 
     const body = text.trim()
     if (!body && files.length === 0) return
     onSend(body, files)
-    setText(''); setFiles([])
+    setText(''); setFiles([]); setMention(null)
     area.current?.focus()
   }
 
+  const pick = (m: MemberDto) => {
+    if (!mention) return
+    const el = area.current
+    const caret = el?.selectionStart ?? text.length
+    const next = `${text.slice(0, mention.start)}@${m.name} ${text.slice(caret)}`
+    setText(next)
+    setMention(null)
+    const pos = mention.start + m.name.length + 2
+    requestAnimationFrame(() => { el?.focus(); el?.setSelectionRange(pos, pos) })
+  }
+
   const onKey = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (suggestions.length) {
+      if (e.key === 'ArrowDown') { e.preventDefault(); setActive((a) => (a + 1) % suggestions.length); return }
+      if (e.key === 'ArrowUp') { e.preventDefault(); setActive((a) => (a - 1 + suggestions.length) % suggestions.length); return }
+      if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); pick(suggestions[active]); return }
+      if (e.key === 'Escape') { setMention(null); return }
+    }
     if (e.key === 'Enter' && !e.shiftKey && !touch) { e.preventDefault(); submit() }
   }
 
   const onChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
     setText(e.target.value)
+    setMention(mentionQuery(e.target.value, e.target.selectionStart ?? e.target.value.length))
     if (Date.now() - lastTyping.current > 3000) { lastTyping.current = Date.now(); void chatHub.typing(roomId) }
+  }
+
+  const uploadOne = (f: File) => {
+    const form = new FormData()
+    form.append('file', f)
+    return api<Uploaded>(`/api/chats/${roomId}/attachments`, { method: 'POST', body: form })
   }
 
   const upload = async (list: FileList | null) => {
@@ -465,9 +550,7 @@ function Composer({ roomId, replyTo, onCancelReply, onSend }: { roomId: string; 
     setUploading(true)
     try {
       for (const f of Array.from(list).slice(0, 5)) {
-        const form = new FormData()
-        form.append('file', f)
-        const a = await api<Uploaded>(`/api/chats/${roomId}/attachments`, { method: 'POST', body: form })
+        const a = await uploadOne(f)
         setFiles((x) => [...x, a])
       }
     } catch (e) {
@@ -478,13 +561,30 @@ function Composer({ roomId, replyTo, onCancelReply, onSend }: { roomId: string; 
     }
   }
 
+  /** A finished voice note goes out on its own, as a message with one audio attachment. */
+  const sendVoice = async (file: File) => {
+    setRecording(false)
+    setUploading(true)
+    try {
+      const a = await uploadOne(file)
+      onSend('', [a])
+    } catch (e) {
+      toast({ kind: 'error', text: e instanceof ApiError ? e.message : String(e) })
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const empty = !text.trim() && files.length === 0
+
   return (
-    <div className="border-t border-line bg-surface/95 px-2 pb-[calc(8px+var(--safe-bottom))] pt-2 backdrop-blur">
+    <div className="relative border-t border-line bg-surface/95 px-2 pb-[calc(8px+var(--safe-bottom))] pt-2 backdrop-blur md:px-6 md:pb-4 md:pt-3">
+      <MentionList items={suggestions} active={active} onPick={pick} />
       {replyTo && (
         <div className="mx-1 mb-2 flex items-center gap-2 rounded-xl border-s-4 border-brand-400 bg-sunken px-3 py-2 text-sm">
           <Reply className="h-4 w-4 shrink-0 text-accent" />
           <div className="min-w-0 flex-1"><p className="font-bold">{replyTo.sender.name}</p><p className="truncate text-muted" dir="auto">{replyTo.body || replyTo.attachments[0]?.name}</p></div>
-          <button onClick={onCancelReply} className="text-muted"><X className="h-4 w-4" /></button>
+          <button onClick={onCancelReply} className="text-muted" aria-label={t('close')}><X className="h-4 w-4" /></button>
         </div>
       )}
       {(files.length > 0 || uploading) && (
@@ -498,18 +598,28 @@ function Composer({ roomId, replyTo, onCancelReply, onSend }: { roomId: string; 
           {uploading && <span className="chip h-8 bg-sunken text-muted"><Loader2 className="h-3.5 w-3.5 animate-spin" />{t('uploading')}</span>}
         </div>
       )}
-      <div className="flex items-end gap-1.5">
-        <input ref={fileInput} type="file" hidden multiple accept="image/*,.pdf,.zip,.rar,.dwg,.dxf,.docx,.xlsx,.pptx,audio/*" onChange={(e) => upload(e.target.files)} />
-        <button className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-muted hover:bg-sunken" onClick={() => fileInput.current?.click()} aria-label={t('attachFile')}>
-          <Paperclip className="h-5 w-5" />
-        </button>
-        <textarea ref={area} rows={1} value={text} onChange={onChange} onKeyDown={onKey} placeholder={t('typeMessage')} dir="auto" maxLength={4000}
-          className="max-h-[140px] min-h-[44px] flex-1 resize-none rounded-[22px] border border-line bg-bg px-4 py-2.5 text-[16px] leading-6 outline-none focus:border-brand-300" />
-        <button className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-brand-500 text-white transition active:scale-90 disabled:opacity-40"
-          onClick={submit} disabled={(!text.trim() && files.length === 0) || uploading} aria-label={t('send')}>
-          <SendHorizonal className="h-5 w-5 rtl:rotate-180" />
-        </button>
-      </div>
+      {recording ? (
+        <VoiceRecorder onCancel={() => setRecording(false)} onDone={(f) => void sendVoice(f)}
+          onError={(msg) => { setRecording(false); toast({ kind: 'error', text: msg }) }} />
+      ) : (
+        <div className="flex items-end gap-1.5">
+          <input ref={fileInput} type="file" hidden multiple accept="image/*,.pdf,.zip,.rar,.dwg,.dxf,.docx,.xlsx,.pptx,audio/*" onChange={(e) => upload(e.target.files)} />
+          <button className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-muted hover:bg-sunken" onClick={() => fileInput.current?.click()} aria-label={t('attachFile')}>
+            <Paperclip className="h-5 w-5" />
+          </button>
+          <textarea ref={area} rows={1} value={text} onChange={onChange} onKeyDown={onKey} placeholder={t('typeMessage')} dir="auto" maxLength={4000}
+            onBlur={() => window.setTimeout(() => setMention(null), 150)}
+            className="max-h-[140px] min-h-[44px] flex-1 resize-none rounded-[22px] border border-line bg-bg px-4 py-2.5 text-[16px] leading-6 outline-none focus:border-brand-300" />
+          {empty && canRecord && !uploading
+            ? <MicButton onClick={() => setRecording(true)} label={t('recordVoice')} />
+            : (
+              <button className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-brand-500 text-white transition active:scale-90 disabled:opacity-40"
+                onClick={submit} disabled={empty || uploading} aria-label={t('send')}>
+                <SendHorizonal className="h-5 w-5 rtl:rotate-180" />
+              </button>
+            )}
+        </div>
+      )}
     </div>
   )
 }

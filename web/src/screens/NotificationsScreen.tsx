@@ -45,7 +45,7 @@ export function NotificationsScreen() {
       {error ? <ErrorState error={error} onRetry={() => refetch()} /> : null}
       {isLoading && <div className="space-y-2 p-4">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-16 w-full" />)}</div>}
       {data && data.length === 0 && <EmptyState icon={<Bell className="h-7 w-7" />} title={t('noNotifications')} body={t('pushWhy')} />}
-      <ul className="px-2 py-2">
+      <ul className="px-2 py-2 md:mx-8 md:my-6 md:rounded-[20px] md:border md:border-line md:bg-surface md:p-2 md:shadow-card">
         {data?.map((n) => {
           const { Icon, tone } = iconFor(n.kind)
           return (

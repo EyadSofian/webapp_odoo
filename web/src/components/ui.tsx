@@ -147,7 +147,7 @@ export function TopBar({ title, subtitle, back, actions, transparent }: { title?
   const { t } = useI18n()
   return (
     <header className={clsx('sticky top-0 z-30 pt-safe', transparent ? 'bg-transparent' : 'border-b border-line/70 bg-surface/85 backdrop-blur-xl md:bg-bg/80')}>
-      <div className="mx-auto flex h-14 max-w-6xl items-center gap-2 px-3 md:h-[72px] md:px-8">
+      <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-3 md:h-20 md:px-8">
         {back && (
           <button
             className="back-btn grid h-10 w-10 place-items-center rounded-full hover:bg-sunken"
@@ -158,8 +158,8 @@ export function TopBar({ title, subtitle, back, actions, transparent }: { title?
           </button>
         )}
         <div className="min-w-0 flex-1">
-          {title && <h1 dir={typeof title === 'string' ? 'auto' : undefined} className="bidi truncate font-display text-[16px] font-bold leading-tight md:text-[22px]">{title}</h1>}
-          {subtitle && <p className="truncate text-xs text-muted">{subtitle}</p>}
+          {title && <h1 dir={typeof title === 'string' ? 'auto' : undefined} className="bidi truncate font-display text-[17px] font-bold leading-tight md:text-[26px]">{title}</h1>}
+          {subtitle && <p className="truncate text-xs text-muted md:mt-1 md:text-sm">{subtitle}</p>}
         </div>
         {actions}
       </div>
