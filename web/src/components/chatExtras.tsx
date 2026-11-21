@@ -69,8 +69,12 @@ export function MentionList({ items, active, onPick }: { items: MemberDto[]; act
 
 // ------------------------------------------------------------------ voice recording
 
+/**
+ * AAC in MP4 first: it plays on every phone. Android's usual WebM/Opus does not play on older iPhones, so it is only
+ * the fallback where AAC recording is not available.
+ */
 const pickMime = () => {
-  const options = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus']
+  const options = ['audio/mp4;codecs=mp4a.40.2', 'audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus']
   return options.find((m) => typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported?.(m)) ?? ''
 }
 

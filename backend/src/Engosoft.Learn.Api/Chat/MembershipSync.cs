@@ -73,11 +73,23 @@ public sealed class MembershipSync(
             sp.GetRequiredService<MembershipSync>().SyncForUserAsync(user, sp.GetRequiredService<LearningService>(), ct));
     }
 
+    /// <summary>
+    /// Syncs several courses in parallel. One course failing (an Odoo error, or a group another server instance created
+    /// a moment earlier) is logged and skipped; it must not stop the others, which would otherwise wait 15 minutes.
+    /// </summary>
     public static Task SyncManyAsync(IServiceScopeFactory scopes, IEnumerable<int> eventIds, int parallel, CancellationToken ct) =>
         Parallel.ForEachAsync(eventIds, new ParallelOptions { MaxDegreeOfParallelism = parallel, CancellationToken = ct }, async (id, token) =>
         {
             await using var scope = scopes.CreateAsyncScope();
-            await scope.ServiceProvider.GetRequiredService<MembershipSync>().SyncEventAsync(id, token);
+            try
+            {
+                await scope.ServiceProvider.GetRequiredService<MembershipSync>().SyncEventAsync(id, token);
+            }
+            catch (Exception ex) when (!token.IsCancellationRequested)
+            {
+                scope.ServiceProvider.GetRequiredService<ILogger<MembershipSync>>()
+                    .LogWarning(ex, "Syncing the group of course {Event} failed; the other courses continue", id);
+            }
         });
 
     public async Task SyncEventAsync(int eventId, CancellationToken ct)

@@ -124,6 +124,17 @@ await using (var scope = app.Services.CreateAsyncScope())
             scope.ServiceProvider.GetRequiredService<IOptions<Engosoft.Learn.Api.Chat.ChatOptions>>().Value, CancellationToken.None);
     }
     catch (Exception ex) { app.Logger.LogWarning(ex, "Could not load saved chat settings; using the configured ones"); }
+
+    // One group per course is enforced by a unique index, which is only created when no duplicates exist (see the
+    // OneCourseGroupPerEvent migration). If some exist, say so, so they can be merged by hand.
+    try
+    {
+        var duplicates = await scope.ServiceProvider.GetRequiredService<AppDbContext>().Rooms.AsNoTracking()
+            .Where(r => r.Kind == RoomKind.Course).GroupBy(r => r.OdooEventId).Where(g => g.Count() > 1).Select(g => g.Key).ToListAsync();
+        if (duplicates.Count > 0)
+            app.Logger.LogWarning("Courses with more than one group: {Events}. The one-group-per-course index was not created", duplicates);
+    }
+    catch (Exception ex) { app.Logger.LogWarning(ex, "Could not check for duplicate course groups"); }
 }
 
 app.UseForwardedHeaders();
