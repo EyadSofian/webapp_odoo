@@ -1,11 +1,13 @@
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using Engosoft.Learn.Api.Chat;
 using Engosoft.Learn.Api.Common;
 using Engosoft.Learn.Api.Data;
 using Engosoft.Learn.Api.Odoo;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
@@ -204,7 +206,7 @@ public static class AuthModule
         var g = app.MapGroup("/api/auth").WithTags("Auth");
 
         g.MapPost("/login", async (LoginRequest body, IOdooClient odoo, IdentityResolver identity, TokenService tokens,
-            HttpContext http, ILogger<TokenService> log, CancellationToken ct) =>
+            BackgroundJobQueue jobs, IMemoryCache cache, HttpContext http, ILogger<TokenService> log, CancellationToken ct) =>
         {
             var email = body.Email?.Trim().ToLowerInvariant() ?? "";
             if (email.Length is < 3 or > 254 || string.IsNullOrEmpty(body.Password) || body.Password.Length > 256)
@@ -223,11 +225,14 @@ public static class AuthModule
             var resolved = await identity.ResolveAsync(uid.Value, ct);
             if (!resolved.IsSuccess) return resolved.Error!.ToProblem();
             var (user, mail, lang) = resolved.Value;
-            return Results.Ok(await tokens.IssueAsync(user, mail, lang, http.Request.Headers.UserAgent, ct));
+            var issued = await tokens.IssueAsync(user, mail, lang, http.Request.Headers.UserAgent, ct);
+            // Their course groups are ready by the time the first screen loads.
+            MembershipSync.QueueForUser(jobs, cache, user, now: true);
+            return Results.Ok(issued);
         }).RequireRateLimiting("login").AllowAnonymous();
 
         g.MapPost("/refresh", async (RefreshRequest body, AppDbContext db, IdentityResolver identity, TokenService tokens,
-            TimeProvider clock, HttpContext http, CancellationToken ct) =>
+            BackgroundJobQueue jobs, IMemoryCache cache, TimeProvider clock, HttpContext http, CancellationToken ct) =>
         {
             if (string.IsNullOrWhiteSpace(body.RefreshToken))
                 return Error.Unauthorized("invalid_refresh", "سجّل الدخول مرة أخرى.").ToProblem();
@@ -277,6 +282,7 @@ public static class AuthModule
             // The retired one points at the new token too, so if a copy of it ever shows up, it is caught as a second copy.
             if (unused is not null) unused.ReplacedById = issuedId;
             await db.SaveChangesAsync(ct);
+            MembershipSync.QueueForUser(jobs, cache, user);
             return Results.Ok(issued);
         }).RequireRateLimiting("refresh").AllowAnonymous();
 

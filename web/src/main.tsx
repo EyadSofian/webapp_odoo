@@ -1,13 +1,14 @@
-import { StrictMode, lazy, useEffect, type ReactNode } from 'react'
+import { StrictMode, lazy, type ReactNode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Navigate, Outlet, RouterProvider, createBrowserRouter, useLocation } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { registerSW } from 'virtual:pwa-register'
 import { ApiError } from './lib/api'
 import { AuthProvider, useAuth } from './lib/auth'
 import { I18nProvider } from './lib/i18n'
 import { ToastProvider } from './components/ui'
 import { AppShell } from './components/AppShell'
+import { UpdateBar } from './components/UpdateBar'
+import { startUpdates } from './lib/update'
 import { LoginScreen } from './screens/LoginScreen'
 import { HomeScreen } from './screens/HomeScreen'
 import { ChatsLayout, ChatsPlaceholder } from './screens/ChatsScreen'
@@ -50,39 +51,10 @@ function GuestOnly({ children }: { children: ReactNode }) {
   return user ? <Navigate to="/" replace /> : <>{children}</>
 }
 
-/**
- * New deploys install in the background and take over only at a moment nobody notices: right after the app opens,
- * or when the person comes back after a long break. Never in the middle of use: on iPhone a sudden reload looks
- * like the app throwing you out. A closed app picks the new version up on its next start anyway. Checks hourly.
- */
-function UpdatePrompt() {
-  useEffect(() => {
-    let waiting = false
-    let hiddenAt = 0
-    const apply = registerSW({
-      immediate: true,
-      onNeedRefresh() {
-        waiting = true
-        if (performance.now() < 8000) void apply(true)
-      },
-      onRegisteredSW(_url, reg) {
-        if (reg) setInterval(() => { void reg.update().catch(() => undefined) }, 60 * 60 * 1000)
-      },
-    })
-    const onVisibility = () => {
-      if (document.visibilityState === 'hidden') { hiddenAt = Date.now(); return }
-      if (waiting && hiddenAt && Date.now() - hiddenAt > 10 * 60 * 1000) void apply(true)
-    }
-    document.addEventListener('visibilitychange', onVisibility)
-    return () => document.removeEventListener('visibilitychange', onVisibility)
-  }, [])
-  return null
-}
-
 function Root() {
   return (
     <>
-      <UpdatePrompt />
+      <UpdateBar />
       <Outlet />
     </>
   )
@@ -122,6 +94,8 @@ const router = createBrowserRouter([
     ],
   },
 ])
+
+startUpdates()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

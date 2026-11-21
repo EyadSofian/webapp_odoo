@@ -135,6 +135,9 @@ app.Use((http, next) =>
     h["X-Frame-Options"] = "SAMEORIGIN";
     h["Permissions-Policy"] = "camera=(), geolocation=(), payment=()";
     if (!app.Environment.IsDevelopment()) h.StrictTransportSecurity = "max-age=31536000; includeSubDomains";
+    // API answers are data and files, never pages: if one is ever opened directly (an SVG course image from Odoo,
+    // an uploaded file), it cannot run scripts on the app's origin.
+    if (http.Request.Path.StartsWithSegments("/api")) h.ContentSecurityPolicy = "default-src 'none'; frame-ancestors 'none'; sandbox";
     return next(http);
 });
 app.UseExceptionHandler();

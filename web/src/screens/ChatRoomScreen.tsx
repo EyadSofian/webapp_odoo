@@ -719,7 +719,6 @@ function RoomInfo({ open, onClose, room, staff, onChanged }: { open: boolean; on
  */
 function GroupWelcome({ room }: { room: RoomDetail }) {
   const { lang } = useI18n()
-  const navigate = useNavigate()
   const ar = lang === 'ar'
   const course = useQuery({
     queryKey: ['live-course', String(room.eventId)],
@@ -763,7 +762,7 @@ function GroupWelcome({ room }: { room: RoomDetail }) {
           </div>
         )}
 
-        <ul className="mt-4 space-y-3">
+        <ul className="mt-4 space-y-3 pb-1">
           {rules.map(({ icon: Icon, text }) => (
             <li key={text} className="flex items-start gap-3 text-sm leading-6">
               <Icon className="mt-1 h-4 w-4 shrink-0 text-accent" />
@@ -772,9 +771,6 @@ function GroupWelcome({ room }: { room: RoomDetail }) {
           ))}
         </ul>
 
-        <button type="button" className="btn-soft mt-5 w-full" onClick={() => navigate(`/live/${room.eventId}`)}>
-          {ar ? 'صفحة الدورة والمحاضرات' : 'Course page and sessions'}
-        </button>
       </div>
     </div>
   )

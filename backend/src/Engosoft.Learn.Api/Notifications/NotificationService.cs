@@ -88,7 +88,10 @@ public sealed class NotificationService(
     {
         if (partnerIds.Count == 0) return;
         var now = clock.GetUtcNow().UtcDateTime;
-        var rows = partnerIds.Distinct().Select(p => new Notification { PartnerId = p, Kind = kind, Title = title, Body = body, Url = url, CreatedAt = now }).ToList();
+        // Course titles can be long: keep within the columns, or the whole save fails and nobody gets the notice.
+        title = Fit(title, 256);
+        body = Fit(body, 1000);
+        var rows = partnerIds.Distinct().Select(p => new Notification { PartnerId = p, Kind = Fit(kind, 32), Title = title, Body = body, Url = url, CreatedAt = now }).ToList();
         db.Notifications.AddRange(rows);
         await db.SaveChangesAsync(ct);
         foreach (var n in rows)
@@ -96,6 +99,8 @@ public sealed class NotificationService(
                 new { n.Id, n.Kind, n.Title, n.Body, n.Url, n.CreatedAt }, ct);
         PushOnly(partnerIds, new PushMessage(title, body, url, tag ?? kind, urgent));
     }
+
+    private static string Fit(string s, int max) => s.Length <= max ? s : s[..(max - 1)] + "…";
 
     /// <summary>Queues a push without an inbox entry (chat messages have their own unread state).</summary>
     public void PushOnly(IReadOnlyCollection<int> partnerIds, PushMessage message)

@@ -25,8 +25,10 @@ public static class LearningModule
 
         api.MapGet("/me", (LearningService s, CurrentUser u, CancellationToken ct) => s.GetProfileAsync(u, ct)).WithTags("Me");
 
-        api.MapGet("/home", async (LearningService s, CurrentUser u, NotificationService notifications, ChatService chat, CancellationToken ct) =>
+        api.MapGet("/home", async (LearningService s, CurrentUser u, NotificationService notifications, ChatService chat,
+            BackgroundJobQueue jobs, IMemoryCache cache, CancellationToken ct) =>
         {
+            MembershipSync.QueueForUser(jobs, cache, u);
             var unreadNotifications = await notifications.UnreadCountAsync(u.PartnerId, ct);
             var unreadMessages = await chat.UnreadTotalAsync(u.PartnerId, ct);
             return Results.Ok(await s.GetHomeAsync(u, unreadNotifications, unreadMessages, ct));

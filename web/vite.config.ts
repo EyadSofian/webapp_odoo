@@ -4,7 +4,11 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 const api = process.env.API_URL ?? 'http://localhost:5080'
 
+// Shown in the profile, so support can tell which version a phone runs.
+const build = new Date().toISOString().slice(0, 16).replace('T', ' ')
+
 export default defineConfig({
+  define: { __APP_BUILD__: JSON.stringify(build) },
   plugins: [
     react(),
     VitePWA({

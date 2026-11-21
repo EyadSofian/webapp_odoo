@@ -149,7 +149,7 @@ export function ProfileScreen() {
           </button>
         </section>
 
-        <p className="pb-4 text-center text-xs text-muted">Engosoft Learn · v1.0</p>
+        <p className="num pb-4 text-center text-xs text-muted" dir="ltr">Engosoft Learn · {__APP_BUILD__}</p>
         </div>
       </div>
     </div>

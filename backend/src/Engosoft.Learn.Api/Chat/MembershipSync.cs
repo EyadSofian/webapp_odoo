@@ -59,6 +59,20 @@ public sealed class MembershipSync(
         if (stale.Length > 0) jobs.Enqueue("chat-resync", (sp, token) => SyncManyAsync(sp.GetRequiredService<IServiceScopeFactory>(), stale, 4, token));
     }
 
+    /// <summary>
+    /// Brings a person into all their course groups in the background: at sign-in, on each token refresh and when Home
+    /// opens, at most once every few minutes. Nobody has to open the Groups tab first to be added and to get group
+    /// notifications.
+    /// </summary>
+    public static void QueueForUser(BackgroundJobQueue jobs, IMemoryCache cache, CurrentUser user, bool now = false)
+    {
+        var key = $"group-sync-queued:{user.PartnerId}";
+        if (!now && cache.TryGetValue(key, out _)) return;
+        cache.Set(key, true, TimeSpan.FromMinutes(5));
+        jobs.Enqueue("chat-user-sync", (sp, ct) =>
+            sp.GetRequiredService<MembershipSync>().SyncForUserAsync(user, sp.GetRequiredService<LearningService>(), ct));
+    }
+
     public static Task SyncManyAsync(IServiceScopeFactory scopes, IEnumerable<int> eventIds, int parallel, CancellationToken ct) =>
         Parallel.ForEachAsync(eventIds, new ParallelOptions { MaxDegreeOfParallelism = parallel, CancellationToken = ct }, async (id, token) =>
         {

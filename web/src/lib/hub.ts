@@ -6,6 +6,20 @@ type Handler = (...args: any[]) => void
 
 let connection: HubConnection | null = null
 let starting: Promise<HubConnection> | null = null
+/** A connection was up before: the next fresh start must tell open screens to catch up (rejoin rooms, refetch). */
+let everConnected = false
+let retryTimer = 0
+
+/**
+ * The automatic reconnect gives up after about a minute, and iOS drops the socket of an app in the background.
+ * While the app is on screen, keep trying; coming back to the app also restarts it (AppShell).
+ */
+function scheduleRetry() {
+  window.clearTimeout(retryTimer)
+  retryTimer = window.setTimeout(() => {
+    if (connection && document.visibilityState === 'visible') void ensureHub().catch(() => undefined)
+  }, 10_000)
+}
 const handlers = new Map<string, Set<Handler>>()
 const stateListeners = new Set<(s: HubConnectionState) => void>()
 
@@ -26,7 +40,7 @@ function build() {
   }
   c.onreconnecting(emitState)
   c.onreconnected(() => { emitState(); handlers.get('reconnected')?.forEach((h) => h()) })
-  c.onclose(emitState)
+  c.onclose(() => { emitState(); if (connection === c) scheduleRetry() })
   return c
 }
 
@@ -36,9 +50,18 @@ export async function ensureHub(): Promise<HubConnection> {
   connection ??= build()
   starting = (async () => {
     try {
-      if (connection!.state === HubConnectionState.Disconnected) await connection!.start()
+      const c = connection!
+      if (c.state === HubConnectionState.Disconnected) {
+        await c.start()
+        // A fresh connection is in no room yet and missed whatever was sent while it was down.
+        if (everConnected) handlers.get('reconnected')?.forEach((h) => h())
+        everConnected = true
+      }
       emitState()
-      return connection!
+      return c
+    } catch (e) {
+      scheduleRetry()
+      throw e
     } finally {
       starting = null
     }
@@ -49,6 +72,8 @@ export async function ensureHub(): Promise<HubConnection> {
 export async function stopHub() {
   const c = connection
   connection = null
+  everConnected = false
+  window.clearTimeout(retryTimer)
   await c?.stop().catch(() => undefined)
   emitState()
 }

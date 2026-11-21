@@ -118,6 +118,8 @@ export function VoiceRecorder({ onCancel, onDone, onError }: { onCancel: () => v
 
         // Live level meter
         ctx = new AudioContext()
+        // iOS starts an AudioContext created outside a tap suspended, which would leave the level meter flat.
+        void ctx.resume().catch(() => undefined)
         const analyser = ctx.createAnalyser()
         analyser.fftSize = 256
         ctx.createMediaStreamSource(s).connect(analyser)
