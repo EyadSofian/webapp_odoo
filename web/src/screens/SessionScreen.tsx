@@ -39,15 +39,16 @@ export function SessionScreen() {
 
   const s = data?.session
   return (
-    <div className="mx-auto min-h-dvh max-w-3xl bg-bg">
+    <div className="mx-auto min-h-dvh max-w-3xl bg-bg lg:max-w-[1280px]">
       <TopBar back title={s ? `${t('session')} ${s.number}` : t('session')} subtitle={s?.eventTitle} />
       {error ? <ErrorState error={error} onRetry={() => refetch()} /> : null}
       {isLoading && <div className="space-y-3 p-4"><Skeleton className="aspect-video w-full" /><Skeleton className="h-20 w-full" /></div>}
 
       {data && s && (
-        <div className="animate-fade-up">
+        <div className="animate-fade-up lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-8 lg:px-8 lg:pb-10 lg:pt-4">
+          <div className="min-w-0">
           {data.recordingEmbedUrl ? (
-            <div className="relative aspect-video w-full bg-black md:mt-4 md:overflow-hidden md:rounded-2xl">
+            <div className="relative aspect-video w-full bg-black md:mt-4 md:overflow-hidden md:rounded-2xl lg:mt-0">
               <iframe
                 src={data.recordingEmbedUrl}
                 className="absolute inset-0 h-full w-full"
@@ -58,7 +59,7 @@ export function SessionScreen() {
               />
             </div>
           ) : (
-            <div className="mx-4 mt-4 grid aspect-video place-items-center rounded-2xl bg-gradient-to-br from-brand-600 to-brand-900 text-center text-white">
+            <div className="mx-4 mt-4 grid aspect-video place-items-center rounded-2xl bg-gradient-to-br from-brand-600 to-brand-900 text-center text-white lg:mx-0 lg:mt-0">
               <div className="px-6">
                 <Video className="mx-auto mb-2 h-10 w-10 opacity-80" />
                 {data.recordingOnWebsiteOnly ? (
@@ -76,21 +77,24 @@ export function SessionScreen() {
             </div>
           )}
 
-          <div className="space-y-5 px-4 py-4">
+          <div className="space-y-5 px-4 py-4 lg:px-0 lg:py-5">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h2 className="font-display text-lg font-bold">{s.title}</h2>
+                <h2 className="font-display text-lg font-bold lg:text-[22px]">{s.title}</h2>
                 <p className="text-sm text-muted">{formatDay(s.start, lang)} · <span className="num">{formatTime(s.start, lang)}</span></p>
               </div>
               <SessionPill status={s.status} />
             </div>
 
             {s.canJoin && (
-              <button className={s.status === 'live' ? 'btn-live w-full' : 'btn-primary w-full'} onClick={() => join(s.id)} disabled={busy === s.id}>
+              <button className={s.status === 'live' ? 'btn-live w-full lg:w-auto lg:px-8' : 'btn-primary w-full lg:w-auto lg:px-8'} onClick={() => join(s.id)} disabled={busy === s.id}>
                 <Video className="h-5 w-5" />{t('joinNow')}
               </button>
             )}
+          </div>
+          </div>
 
+          <div className="px-4 pb-6 lg:sticky lg:top-24 lg:px-0 lg:pb-0">
             <section>
               <h3 className="section-title mb-2">{t('files')}</h3>
               {data.documents.length === 0 ? (

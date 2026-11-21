@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import clsx from 'clsx'
 import { CalendarClock, ChevronLeft, FileText, PlayCircle, Video } from 'lucide-react'
@@ -179,5 +179,54 @@ export function RecordedCourseTile({ c, wide }: { c: RecordedCourseCard; wide?: 
         </p>
       </div>
     </Link>
+  )
+}
+
+// ------------------------------------------------------------------ course header
+
+export interface HeaderStat { value: ReactNode; label: string }
+
+/**
+ * The top of a course page. The course art keeps its own 16:9 shape (it is usually a poster with text),
+ * with the title, facts and main actions beside it on desktop and under it on phones.
+ */
+export function CourseHeader({ cover, chips, title, meta, description, stats, actions }: {
+  cover: ReactNode; chips?: ReactNode; title: string; meta?: ReactNode; description?: string | null; stats: HeaderStat[]; actions?: ReactNode
+}) {
+  return (
+    <section className="md:mx-8 md:mt-2">
+      <div className="overflow-hidden bg-surface md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,440px)] md:rounded-[24px] md:border md:border-line md:shadow-card xl:grid-cols-[minmax(0,1fr)_520px]">
+        <div className="md:order-2 md:p-3 md:ps-0">{cover}</div>
+        <div className="flex min-w-0 flex-col gap-4 p-4 md:order-1 md:justify-center md:gap-5 md:p-8">
+          {chips && <div className="flex flex-wrap gap-1.5">{chips}</div>}
+          <div>
+            <h1 className="font-display text-[22px] font-bold leading-snug md:text-[30px] md:leading-tight" dir="auto">{title}</h1>
+            {meta && <div className="mt-2 text-sm text-muted md:text-[15px]">{meta}</div>}
+            {description && <p className="mt-3 line-clamp-3 max-w-2xl text-sm leading-7 text-muted">{description}</p>}
+          </div>
+          <dl className="flex flex-wrap gap-y-3">
+            {stats.map((s, i) => (
+              <div key={i} className={clsx('min-w-[88px] pe-5', i > 0 && 'border-s border-line ps-5')}>
+                <dd className="num text-[20px] font-bold leading-7 md:text-[22px]">{s.value}</dd>
+                <dt className="text-xs text-muted">{s.label}</dt>
+              </div>
+            ))}
+          </dl>
+          {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+/** Desktop breadcrumb shown in the page bar above a course: "My courses › title". */
+export function CourseCrumb({ title, to }: { title: string; to: string }) {
+  const { t } = useI18n()
+  return (
+    <span className="flex min-w-0 items-center gap-2 text-[17px] md:text-[15px] md:font-semibold">
+      <Link to={to} className="hidden shrink-0 text-muted hover:text-ink md:inline">{t('courses')}</Link>
+      <ChevronLeft className="hidden h-4 w-4 shrink-0 text-muted ltr:rotate-180 md:block" />
+      <span className="truncate" dir="auto">{title}</span>
+    </span>
   )
 }

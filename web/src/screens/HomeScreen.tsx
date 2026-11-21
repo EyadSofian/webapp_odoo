@@ -26,15 +26,15 @@ export function HomeScreen() {
   const firstName = data?.name.split(' ')[0] ?? ''
 
   const nextCourse = data?.liveCourses.find((c) => c.eventId === data.nextSession?.eventId)
-  const later = data?.upcoming.filter((s) => s.id !== data.nextSession?.id).slice(0, 6) ?? []
+  const [allUpcoming, setAllUpcoming] = useState(false)
+  const laterAll = data?.upcoming.filter((s) => s.id !== data.nextSession?.id) ?? []
+  const later = allUpcoming ? laterAll : laterAll.slice(0, 4)
 
   return (
-    <div className="mx-auto max-w-6xl md:px-8 md:pt-8">
+    <div className="mx-auto max-w-[1280px] md:px-8 md:pt-8">
       {/* Hero */}
-      <section className="relative overflow-hidden pt-safe text-white md:rounded-[32px]">
-        <motion.img src="/art/home-hero.webp" alt="" className="absolute inset-0 h-full w-full object-cover"
-          initial={{ scale: 1.06 }} animate={{ scale: 1 }} transition={{ duration: 1.4, ease: [0.2, 0.8, 0.2, 1] }} />
-        <div className="absolute inset-0 bg-gradient-to-l from-[rgb(6_32_58/0.55)] via-[rgb(6_32_58/0.78)] to-[rgb(6_32_58/0.95)] ltr:bg-gradient-to-r" />
+      <section className="relative overflow-hidden bg-[linear-gradient(135deg,#1d68bb_0%,#1656A0_50%,#0f467f_100%)] pt-safe text-white dark:bg-[linear-gradient(135deg,#134781_0%,#0d3462_55%,#0a2747_100%)] md:rounded-[28px]">
+        <img src="/art/empty-courses.webp" alt="" className="absolute inset-0 h-full w-full object-cover opacity-25 mix-blend-luminosity" />
         <div className="relative flex h-14 items-center justify-between px-4 md:hidden">
           <Logo variant="white" className="h-7 w-auto" />
           <Link to="/notifications" className="relative grid h-10 w-10 place-items-center rounded-full bg-white/10 backdrop-blur" aria-label={t('notifications')}>
@@ -110,6 +110,11 @@ export function HomeScreen() {
                         <SessionRow s={s} compact />
                       </div>
                     ))}
+                    {laterAll.length > 4 && (
+                      <button className="w-full py-3 text-sm font-bold text-accent" onClick={() => setAllUpcoming((v) => !v)}>
+                        {allUpcoming ? (lang === 'ar' ? 'عرض أقل' : 'Show less') : `${t('seeAll')} (${laterAll.length})`}
+                      </button>
+                    )}
                   </div>
                 </section>
               </Reveal>
@@ -122,7 +127,7 @@ export function HomeScreen() {
                     <h2 className="section-title">{t('continueLearning')}</h2>
                     <Link to="/courses?tab=recorded" className="text-sm font-bold text-accent hover:underline">{t('seeAll')}</Link>
                   </div>
-                  <div className="no-scrollbar -mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 xl:grid-cols-3">
+                  <div className="no-scrollbar -mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2 md:mx-0 md:grid md:grid-cols-2 md:gap-5 md:overflow-visible md:px-0 xl:grid-cols-3">
                     {data.continueLearning.slice(0, 6).map((c) => <RecordedCourseTile key={c.channelId} c={c} />)}
                   </div>
                 </section>
@@ -136,7 +141,7 @@ export function HomeScreen() {
                     <h2 className="section-title">{t('myLiveCourses')}</h2>
                     <Link to="/courses?tab=live" className="text-sm font-bold text-accent hover:underline">{t('seeAll')}</Link>
                   </div>
-                  <Stagger className="grid gap-3 md:grid-cols-2">
+                  <Stagger className="grid gap-3 md:grid-cols-2 md:gap-5 xl:grid-cols-3">
                     {data.liveCourses.slice(0, 6).map((c) => <StaggerItem key={c.eventId}><LiveCourseItem c={c} /></StaggerItem>)}
                   </Stagger>
                 </section>

@@ -7,8 +7,8 @@ import { Check, CheckCircle2, ChevronLeft, ChevronRight, Download, ExternalLink,
 import { motion } from '../lib/motion'
 import { ApiError, api, fetchBlobUrl } from '../lib/api'
 import { useI18n } from '../lib/i18n'
-import type { LessonDetail, LessonQuiz, LessonQuizResult } from '../lib/types'
-import { ErrorState, Skeleton, TopBar, useToast } from '../components/ui'
+import type { LessonDetail, LessonQuiz, LessonQuizResult, RecordedCourseDetail } from '../lib/types'
+import { ErrorState, ProgressBar, Skeleton, TopBar, useToast } from '../components/ui'
 import { lessonIcon } from './RecordedCourseScreen'
 
 export function LessonScreen() {
@@ -45,25 +45,27 @@ export function LessonScreen() {
   const quiz = data?.type === 'quiz' || data?.type === 'certification'
 
   return (
-    <div className="mx-auto flex min-h-dvh max-w-3xl flex-col bg-bg">
+    <div className="mx-auto flex min-h-dvh max-w-3xl flex-col bg-bg lg:max-w-[1400px]">
       <TopBar back={data ? `/recorded/${data.channelId}` : true} title={data?.title} />
       {error ? <ErrorState error={error} onRetry={() => refetch()} /> : null}
       {isLoading && <div className="space-y-3 p-4"><Skeleton className="aspect-video w-full" /><Skeleton className="h-10 w-2/3" /></div>}
 
+      <div className="flex flex-1 flex-col lg:grid lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-8 lg:px-8 lg:pt-4">
+      <div className="flex min-w-0 flex-1 flex-col lg:min-h-[calc(100dvh-7rem)]">
       {data && (
         <div className="flex-1 animate-fade-up">
           {data.videoEmbedUrl && (
-            <div className="relative aspect-video w-full bg-black md:mt-4 md:overflow-hidden md:rounded-2xl">
+            <div className="relative aspect-video w-full bg-black md:mt-4 md:overflow-hidden md:rounded-2xl lg:mt-0">
               <iframe src={data.videoEmbedUrl} className="absolute inset-0 h-full w-full" title={data.title}
                 allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" />
             </div>
           )}
 
-          <div className="space-y-4 px-4 py-4">
+          <div className="space-y-4 px-4 py-4 lg:px-0 lg:py-5">
             <div className="flex items-start gap-3">
               {Icon && <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand-50 text-accent"><Icon className="h-5 w-5" /></span>}
               <div className="min-w-0 flex-1">
-                <h2 className="font-display text-lg font-bold leading-snug" dir="auto">{data.title}</h2>
+                <h2 className="font-display text-lg font-bold leading-snug lg:text-[22px]" dir="auto">{data.title}</h2>
                 {data.minutes > 0 && <p className="num text-xs text-muted">{data.minutes} {t('minutes')}</p>}
               </div>
             </div>
@@ -99,7 +101,7 @@ export function LessonScreen() {
       )}
 
       {data && (
-        <div className="sticky bottom-0 border-t border-line bg-surface/95 px-4 pb-[calc(12px+var(--safe-bottom))] pt-3 backdrop-blur">
+        <div className="sticky bottom-0 border-t border-line bg-surface/95 px-4 pb-[calc(12px+var(--safe-bottom))] pt-3 backdrop-blur lg:bottom-4 lg:mb-4 lg:rounded-2xl lg:border lg:shadow-card">
           <div className="flex items-center gap-2">
             {data.previousLessonId
               ? <Link to={`/lessons/${data.previousLessonId}`} replace className="btn-ghost h-11 w-11 p-0" aria-label={t('previous')}><ChevronRight className="h-5 w-5 ltr:rotate-180" /></Link>
@@ -116,7 +118,51 @@ export function LessonScreen() {
           </div>
         </div>
       )}
+      </div>
+      {data && <LessonOutline channelId={data.channelId} currentId={data.id} />}
+      </div>
     </div>
+  )
+}
+
+/** Desktop: the whole course beside the player, to move between lessons without going back. */
+function LessonOutline({ channelId, currentId }: { channelId: number; currentId: number }) {
+  const { t } = useI18n()
+  const { data } = useQuery({ queryKey: ['course', String(channelId)], queryFn: () => api<RecordedCourseDetail>(`/api/courses/${channelId}`), staleTime: 60_000 })
+  if (!data) return <aside className="hidden lg:block"><Skeleton className="h-96 w-full" /></aside>
+  const all = data.sections.flatMap((x) => x.lessons)
+  const done = all.filter((l) => l.completed).length
+  return (
+    <aside className="hidden lg:sticky lg:top-24 lg:block">
+      <div className="card overflow-hidden">
+        <div className="border-b border-line p-4">
+          <Link to={`/recorded/${channelId}`} className="line-clamp-2 font-bold leading-snug hover:text-accent" dir="auto">{data.course.title}</Link>
+          <div className="mt-3 flex items-center gap-2">
+            <ProgressBar value={data.course.completion} className="flex-1" />
+            <span className="num text-xs text-muted">{done}/{all.length}</span>
+          </div>
+        </div>
+        <div className="max-h-[calc(100dvh-14rem)] overflow-y-auto py-1">
+          {data.sections.map((section, i) => (
+            <div key={section.id ?? i}>
+              {section.title && <p className="px-4 pb-1 pt-3 text-xs font-bold text-muted" dir="auto">{section.title}</p>}
+              {section.lessons.map((l) => {
+                const LIcon = lessonIcon(l.type)
+                const current = l.id === currentId
+                return (
+                  <Link key={l.id} to={`/lessons/${l.id}`} replace
+                    className={clsx('flex items-center gap-3 px-4 py-2.5 text-[14px] transition-colors', current ? 'bg-brand-50 font-semibold text-accent' : 'hover:bg-sunken')}>
+                    {l.completed ? <CheckCircle2 className="h-[18px] w-[18px] shrink-0 text-ok" /> : <LIcon className={clsx('h-[18px] w-[18px] shrink-0', current ? 'text-accent' : 'text-muted')} />}
+                    <span className={clsx('min-w-0 flex-1 truncate', l.completed && !current && 'text-muted')} dir="auto">{l.title}</span>
+                    {l.minutes > 0 && <span className="num shrink-0 text-[11px] text-muted">{l.minutes} {t('minutes')}</span>}
+                  </Link>
+                )
+              })}
+            </div>
+          ))}
+        </div>
+      </div>
+    </aside>
   )
 }
 

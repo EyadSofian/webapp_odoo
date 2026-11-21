@@ -2,14 +2,14 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import clsx from 'clsx'
-import { Bot, CalendarDays, ClipboardCheck, ClipboardList, Hash, Loader2, Lock, MessageCircleQuestion, MessagesSquare, PenLine, Sparkles, UserRound } from 'lucide-react'
+import { Bot, CalendarDays, ChevronDown, ClipboardCheck, ClipboardList, Hash, Loader2, Lock, MessageCircleQuestion, MessagesSquare, PenLine, Sparkles, UserRound } from 'lucide-react'
 import { ApiError, api } from '../lib/api'
 import { useI18n } from '../lib/i18n'
 import { formatDate, weekday } from '../lib/format'
 import { Reveal, Stagger, StaggerItem, motion } from '../lib/motion'
 import type { AssessmentCard, AssessmentDetail, LiveCourseDetail, RoomListItem, SessionSummary } from '../lib/types'
 import { CourseCover, ErrorState, Segmented, Sheet, Skeleton, TopBar, useToast } from '../components/ui'
-import { NextSessionCard, SessionRow, modeLabel, sessionLabel } from '../components/learning'
+import { CourseCrumb, CourseHeader, NextSessionCard, SessionRow, modeLabel, sessionLabel } from '../components/learning'
 
 export function LiveCourseScreen() {
   const { eventId } = useParams()
@@ -47,39 +47,58 @@ export function LiveCourseScreen() {
   const staff = c?.role === 'instructor'
 
   return (
-    <div className="mx-auto max-w-6xl">
-      <TopBar back title={c?.title} subtitle={c?.code ?? undefined} />
+    <div className="mx-auto max-w-[1280px]">
+      <TopBar back title={c ? <CourseCrumb title={c.title} to="/courses?tab=live" /> : undefined} />
       {error ? <ErrorState error={error} onRetry={() => refetch()} /> : null}
-      {isLoading && <div className="space-y-3 p-4 md:p-8"><Skeleton className="h-56 w-full" /><Skeleton className="h-64 w-full" /></div>}
+      {isLoading && <div className="space-y-3 p-4 md:p-8"><Skeleton className="h-72 w-full" /><Skeleton className="h-64 w-full" /></div>}
 
       {c && data && (
         <>
-          <div className="relative md:mx-8 md:mt-2 md:overflow-hidden md:rounded-[28px]">
-            <CourseCover eventId={c.eventId} title={c.title} className="aspect-[16/8] w-full md:aspect-[16/5]" rounded="rounded-none" />
-            <div className="absolute inset-0 bg-gradient-to-t from-[rgb(6_32_58/0.92)] via-[rgb(6_32_58/0.35)] to-transparent" />
-            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="absolute inset-x-0 bottom-0 p-4 text-white md:p-8">
-              <div className="mb-2 flex flex-wrap gap-1.5">
-                {c.code && <span className="chip bg-white/15 text-white backdrop-blur"><Hash className="h-3 w-3" /><span className="num">{c.code}</span></span>}
-                <span className="chip bg-white/15 text-white backdrop-blur">{modeLabel(c.mode, t)}</span>
-                {c.expired && <span className="chip bg-warn text-white"><Lock className="h-3 w-3" />{t('expired')}</span>}
-              </div>
-              <h2 className="font-display text-xl font-bold leading-snug md:text-4xl" dir="auto">{c.title}</h2>
-              {c.instructor && <p className="mt-1.5 flex items-center gap-1.5 text-sm text-white/85 md:text-base"><UserRound className="h-4 w-4" /><bdi>{c.instructor.name}</bdi></p>}
-            </motion.div>
-          </div>
+          <CourseHeader
+            cover={<CourseCover eventId={c.eventId} title={c.title} className="aspect-video w-full md:rounded-[16px]" rounded="rounded-none" />}
+            chips={<>
+              {c.code && <span className="chip bg-sunken text-ink"><Hash className="h-3 w-3" /><span className="num">{c.code}</span></span>}
+              <span className="chip bg-brand-50 text-accent">{modeLabel(c.mode, t)}</span>
+              {c.expired && <span className="chip bg-warn/10 text-warn"><Lock className="h-3 w-3" />{t('expired')}</span>}
+            </>}
+            title={c.title}
+            meta={c.instructor && <span className="flex items-center gap-1.5"><UserRound className="h-4 w-4" /><bdi>{c.instructor.name}</bdi></span>}
+            stats={[
+              { value: <>{done}<span className="text-sm font-semibold text-muted">/{c.sessionsTotal}</span></>, label: t('sessionsDone') },
+              ...(staff ? [] : [{ value: `${Math.round(c.attendancePercent)}%`, label: t('attendance') }]),
+              { value: <span className="text-[16px] md:text-[17px]">{c.accessUntil ? formatDate(c.accessUntil, lang) : '—'}</span>, label: t('accessUntil') },
+            ]}
+            actions={!c.expired ? <>
+              <button className="btn-primary h-11 px-5" disabled={!room} onClick={() => room && navigate(`/chats/${room.id}`)}>
+                <MessagesSquare className="h-5 w-5" />{t('group')}
+                {!!room?.unreadCount && <span className="num rounded-full bg-white/25 px-1.5 text-xs">{room.unreadCount}</span>}
+              </button>
+              {c.role === 'student' && (
+                <button className="btn-soft h-11 px-5" onClick={() => ask.mutate()} disabled={ask.isPending}>
+                  <MessageCircleQuestion className="h-5 w-5" />{t('askPrivately')}
+                </button>
+              )}
+            </> : (
+              <a className="btn-soft h-11 px-5" href="https://engosoft.com" target="_blank" rel="noreferrer">{t('renew')}</a>
+            )}
+          />
 
-          <div className="grid gap-6 px-4 py-5 md:px-8 md:py-8 lg:grid-cols-[minmax(0,1fr)_360px]">
+          <div className="grid gap-6 px-4 py-5 md:px-8 md:py-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-8">
             <div className="min-w-0 space-y-6">
               <Reveal>
                 <section>
-                  <h3 className="section-title mb-2">{t('sessions')}</h3>
+                  <div className="mb-3 flex items-end justify-between">
+                    <h3 className="section-title md:text-[20px]">{t('sessions')}</h3>
+                    <span className="num text-sm text-muted">{c.sessionsTotal} {t('sessions')}</span>
+                  </div>
                   <div className="card divide-y divide-line/70 px-4 md:px-5">
                     {upcoming.map((s) => (
                       <div key={s.id} id={`session-${s.id}`} className={clsx(highlight === s.id && '-mx-4 bg-brand-50/60 px-4 md:-mx-5 md:px-5')}><SessionRow s={s} /></div>
                     ))}
                     {past.length > 0 && (
-                      <button className="w-full py-3 text-sm font-bold text-accent" onClick={() => setShowPast((v) => !v)}>
-                        {showPast ? '▲' : '▼'} {lang === 'ar' ? `المحاضرات السابقة (${past.length})` : `Past sessions (${past.length})`}
+                      <button className="flex w-full items-center justify-center gap-2 py-3 text-sm font-bold text-accent" onClick={() => setShowPast((v) => !v)}>
+                        <ChevronDown className={clsx('h-4 w-4 transition-transform', showPast && 'rotate-180')} />
+                        {lang === 'ar' ? `المحاضرات السابقة (${past.length})` : `Past sessions (${past.length})`}
                       </button>
                     )}
                     {showPast && past.map((s) => (
@@ -93,45 +112,24 @@ export function LiveCourseScreen() {
             </div>
 
             <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
-              <div className="grid grid-cols-3 gap-2 text-center">
-                <div className="card p-3"><p className="num text-lg font-bold">{done}<span className="text-sm text-muted">/{c.sessionsTotal}</span></p><p className="text-[11px] text-muted">{t('sessionsDone')}</p></div>
-                <div className="card p-3"><p className="num text-lg font-bold">{Math.round(c.attendancePercent)}%</p><p className="text-[11px] text-muted">{t('attendance')}</p></div>
-                <div className="card p-3"><p className="num text-sm font-bold leading-7">{c.accessUntil ? formatDate(c.accessUntil, lang) : '—'}</p><p className="text-[11px] text-muted">{t('accessUntil')}</p></div>
-              </div>
-
-              {!c.expired ? (
-                <div className="grid grid-cols-2 gap-2">
-                  <button className="btn-primary" disabled={!room} onClick={() => room && navigate(`/chats/${room.id}`)}>
-                    <MessagesSquare className="h-5 w-5" />{t('group')}
-                    {!!room?.unreadCount && <span className="num rounded-full bg-white/25 px-1.5 text-xs">{room.unreadCount}</span>}
-                  </button>
-                  {c.role === 'student' && (
-                    <button className="btn-soft" onClick={() => ask.mutate()} disabled={ask.isPending}>
-                      <MessageCircleQuestion className="h-5 w-5" />{t('privateQuestion')}
-                    </button>
-                  )}
-                </div>
-              ) : (
-                <div className="rounded-2xl bg-warn/10 p-4 text-sm">
-                  <p className="font-bold text-warn">{t('expired')}</p>
-                  <a className="mt-2 inline-block font-bold text-accent" href="https://engosoft.com" target="_blank" rel="noreferrer">{t('renew')}</a>
+              {c.nextSession && !c.expired && (
+                <div>
+                  <h3 className="section-title mb-3 md:text-[20px]">{t('nextSession')}</h3>
+                  <NextSessionCard session={c.nextSession} instructor={c.instructor?.name} channelId={c.courseChannelId} />
                 </div>
               )}
 
-              {c.nextSession && !c.expired && <NextSessionCard session={c.nextSession} instructor={c.instructor?.name} channelId={c.courseChannelId} />}
-
               {data.weekDays.length > 0 && (
-                <div className="card flex flex-wrap items-center gap-2 p-4 text-sm">
-                  <CalendarDays className="h-4 w-4 text-muted" />
-                  <span className="text-muted">{t('weekDays')}:</span>
-                  {data.weekDays.map((d) => <span key={d} className="chip bg-sunken text-ink">{weekday(d, lang)}</span>)}
+                <div className="card p-4">
+                  <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-muted"><CalendarDays className="h-4 w-4" />{t('weekDays')}</p>
+                  <div className="flex flex-wrap gap-2">{data.weekDays.map((d) => <span key={d} className="chip h-8 bg-sunken px-3 text-[13px] text-ink">{weekday(d, lang)}</span>)}</div>
                 </div>
               )}
 
               {c.courseChannelId && (
                 <Link to={`/recorded/${c.courseChannelId}`} className="card lift group flex items-center gap-3 p-3">
-                  <CourseCover channelId={c.courseChannelId} title={c.title} className="h-12 w-12" rounded="rounded-xl" />
-                  <div className="flex-1">
+                  <CourseCover channelId={c.courseChannelId} title={c.title} className="aspect-video w-24 shrink-0" rounded="rounded-xl" />
+                  <div className="min-w-0 flex-1">
                     <p className="font-bold">{t('recordedCourses')}</p>
                     <p className="text-xs text-muted">{lang === 'ar' ? 'المحتوى المسجّل المرتبط بهذه الدورة' : 'Recorded material for this course'}</p>
                   </div>
