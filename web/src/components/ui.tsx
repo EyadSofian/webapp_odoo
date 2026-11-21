@@ -107,11 +107,13 @@ export function ProgressRing({ value, size = 44, stroke = 4, children }: { value
   )
 }
 
-export function ProgressBar({ value, className }: { value: number; className?: string }) {
+/** A small amount still reads as a bar (not a dot): the fill never goes below a short stub. */
+export function ProgressBar({ value, className, tone = 'blue' }: { value: number; className?: string; tone?: 'blue' | 'sky' }) {
   const v = Math.max(0, Math.min(100, value))
   return (
-    <div className={clsx('h-1.5 w-full overflow-hidden rounded-full bg-sunken', className)} role="progressbar" aria-valuenow={v} aria-valuemin={0} aria-valuemax={100}>
-      <div className={clsx('h-full rounded-full transition-all duration-700', v >= 100 ? 'bg-ok' : 'bg-brand-500')} style={{ width: `${v}%` }} />
+    <div className={clsx('h-2 w-full overflow-hidden rounded-full bg-sunken', className)} role="progressbar" aria-valuenow={v} aria-valuemin={0} aria-valuemax={100}>
+      <div className={clsx('h-full rounded-full transition-[width] duration-700', v >= 100 ? 'bg-ok' : tone === 'sky' ? 'bg-sky' : 'bg-brand-500')}
+        style={{ width: v > 0 ? `max(${v}%, 14px)` : 0 }} />
     </div>
   )
 }

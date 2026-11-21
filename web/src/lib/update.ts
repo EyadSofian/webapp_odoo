@@ -15,6 +15,7 @@ let lastCheck = 0
 let started = false
 
 const RELOAD_KEY = 'engosoft.update-reload'
+const UPDATED_KEY = 'engosoft.updated'
 const LAUNCH_WINDOW_MS = 6000
 
 function setReady(value: boolean) {
@@ -58,7 +59,10 @@ let applying = false
 export async function applyUpdate() {
   if (applying) return
   applying = true
-  try { sessionStorage.setItem(RELOAD_KEY, String(Date.now())) } catch { /* ignore */ }
+  try {
+    sessionStorage.setItem(RELOAD_KEY, String(Date.now()))
+    localStorage.setItem(UPDATED_KEY, String(Date.now()))
+  } catch { /* ignore */ }
   // The reload normally comes from the new worker taking control; if that never happens, reload anyway.
   window.setTimeout(() => window.location.reload(), 4000)
   if (send) await send(true)
@@ -73,4 +77,17 @@ export function useUpdateReady() {
     return () => { listeners.delete(setValue) }
   }, [])
   return value
+}
+
+/**
+ * True once, on the first screen after the app switched to a new version (silently at launch or from the bar),
+ * so the person sees that the update happened instead of the app just flashing.
+ */
+export function takeJustUpdated(): boolean {
+  try {
+    const at = Number(localStorage.getItem(UPDATED_KEY) ?? 0)
+    if (!at) return false
+    localStorage.removeItem(UPDATED_KEY)
+    return Date.now() - at < 60_000
+  } catch { return false }
 }

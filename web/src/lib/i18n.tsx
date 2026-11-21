@@ -63,7 +63,7 @@ const dict = {
     addQuestion: 'أضف سؤالًا', addOption: 'أضف خيارًا', explanation: 'الشرح', title: 'العنوان', instructions: 'التعليمات',
     results: 'النتائج', submissions: 'التسليمات', grade: 'الدرجة', feedback: 'ملاحظاتك', gradeIt: 'اعتماد الدرجة', ungraded: 'بانتظار التصحيح',
     yourSubmission: 'تسليمك', writeAnswer: 'اكتب إجابتك…', attach: 'إرفاق ملفات', submitted: 'تم التسليم', late: 'متأخر', aiMade: 'بالذكاء الاصطناعي',
-    noAssessments: 'لا توجد اختبارات أو مهام بعد.', chooseSession: 'اختر المحاضرة', allDone: 'أنجزت كل المطلوب منك 👏',
+    noAssessments: 'لا توجد اختبارات أو مهام بعد.', chooseSession: 'اختر المحاضرة', allDone: 'لا توجد اختبارات أو مهام بانتظارك',
     checkAnswers: 'تحقّق', allCorrect: 'جميع الإجابات صحيحة، وسُجّل الدرس مكتملًا.', someWrong: 'بعض الإجابات تحتاج إلى مراجعة. أعد المحاولة.',
   },
   en: {
@@ -126,7 +126,7 @@ const dict = {
     addQuestion: 'Add question', addOption: 'Add option', explanation: 'Explanation', title: 'Title', instructions: 'Instructions',
     results: 'Results', submissions: 'Submissions', grade: 'Grade', feedback: 'Feedback', gradeIt: 'Save grade', ungraded: 'To grade',
     yourSubmission: 'Your submission', writeAnswer: 'Write your answer…', attach: 'Attach files', submitted: 'Submitted', late: 'Late', aiMade: 'AI',
-    noAssessments: 'No quizzes or tasks yet.', chooseSession: 'Choose a session', allDone: 'You are all caught up 👏',
+    noAssessments: 'No quizzes or tasks yet.', chooseSession: 'Choose a session', allDone: 'No quizzes or tasks waiting for you',
     checkAnswers: 'Check', allCorrect: 'All correct. The lesson is marked as done.', someWrong: 'Some answers need another look. Try again.',
   },
 } as const

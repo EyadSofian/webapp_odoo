@@ -160,11 +160,13 @@ function ScreenLoading() {
 }
 
 export function AppShell() {
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
+  const dir = lang === 'ar' ? 'rtl' : 'ltr'
   const { data: badges } = useBadges()
   const location = useLocation()
   const fullScreen = /^\/(chats\/[^/]+|lessons\/|sessions\/|assessments\/)/.test(location.pathname)
   const routeKey = location.pathname.startsWith('/chats') ? 'chats' : location.pathname
+  const activeTab = tabs.findIndex(({ to }) => (to === '/' ? location.pathname === '/' : location.pathname.startsWith(to)))
 
   useEffect(() => { void setBadge((badges?.messages ?? 0) + (badges?.notifications ?? 0)) }, [badges])
 
@@ -185,22 +187,28 @@ export function AppShell() {
       {!fullScreen && (
         <nav className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-3 pb-[calc(8px+var(--safe-bottom))] md:hidden">
           {/* Floats over the content on glass, inset from the edges, like the system tab bar */}
-          <div className="pointer-events-auto mx-auto flex h-16 max-w-md items-stretch gap-1 rounded-[22px] border border-ink/[0.08] bg-surface/80 p-1.5 shadow-[0_8px_24px_rgb(0_0_0/0.10)] backdrop-blur-2xl backdrop-saturate-150 dark:shadow-[0_8px_24px_rgb(0_0_0/0.45)]">
-            {tabs.map(({ to, icon: Icon, label, badge }) => (
-              <NavLink key={to} to={to} end={to === '/'}
-                className={({ isActive }) => clsx('relative flex flex-1 flex-col items-center justify-center gap-1 rounded-[16px] text-[11px] font-medium transition-colors', isActive ? 'text-accent' : 'text-muted active:text-ink')}>
-                {({ isActive }) => (
-                  <>
-                    {isActive && <motion.span layoutId="tab-pill" className="absolute inset-0 rounded-[16px] bg-ink/[0.06]" transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }} />}
-                    <span className="relative">
-                      <Icon className="h-[22px] w-[22px]" strokeWidth={isActive ? 2 : 1.75} />
-                      {badge && <Count n={badges?.[badge]} />}
-                    </span>
-                    <span className="relative leading-none">{t(label)}</span>
-                  </>
-                )}
-              </NavLink>
-            ))}
+          <div className="pointer-events-auto mx-auto h-16 max-w-md rounded-[22px] border border-ink/[0.10] bg-surface/85 p-1.5 shadow-[0_8px_24px_rgb(var(--shadow)/0.16)] backdrop-blur-2xl backdrop-saturate-150 dark:border-white/[0.08] dark:shadow-[0_8px_24px_rgb(0_0_0/0.5)]">
+            <div className="relative flex h-full items-stretch gap-1">
+              {/* One indicator that slides inside the bar. A shared-layout animation measured against the page
+                  and flew outside the bar when the new screen scrolled back to the top. */}
+              <span aria-hidden
+                className={clsx('absolute inset-y-0 start-0 rounded-[16px] bg-brand-500/[0.12] transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none dark:bg-brand-300/[0.16]', activeTab < 0 && 'opacity-0')}
+                style={{ width: 'calc((100% - 16px) / 5)', transform: `translateX(calc(${dir === 'rtl' ? -1 : 1} * ${Math.max(activeTab, 0)} * (100% + 4px)))` }} />
+              {tabs.map(({ to, icon: Icon, label, badge }) => (
+                <NavLink key={to} to={to} end={to === '/'}
+                  className={({ isActive }) => clsx('relative flex flex-1 flex-col items-center justify-center gap-1 rounded-[16px] text-[11px] transition-colors', isActive ? 'font-bold text-accent' : 'font-medium text-muted active:text-ink')}>
+                  {({ isActive }) => (
+                    <>
+                      <span className="relative">
+                        <Icon className="h-[22px] w-[22px]" strokeWidth={isActive ? 2.2 : 1.75} />
+                        {badge && <Count n={badges?.[badge]} />}
+                      </span>
+                      <span className="relative leading-none">{t(label)}</span>
+                    </>
+                  )}
+                </NavLink>
+              ))}
+            </div>
           </div>
         </nav>
       )}
