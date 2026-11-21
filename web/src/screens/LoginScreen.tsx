@@ -196,8 +196,6 @@ export function LoginScreen() {
 
   return (
     <div className="relative flex min-h-dvh flex-col bg-bg text-ink">
-      {/* Drafting-paper grid: the only texture on the page */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 [background-image:linear-gradient(rgb(var(--brand-500)/0.08)_1px,transparent_1px),linear-gradient(90deg,rgb(var(--brand-500)/0.08)_1px,transparent_1px)] [background-size:28px_28px] [mask-image:radial-gradient(ellipse_at_center,black_30%,transparent_78%)]" />
 
       <header className="relative mx-auto flex w-full max-w-5xl items-center justify-between px-5 pb-2 pt-[calc(14px+var(--safe-top))] md:px-8 md:pt-6">
         <Logo className="h-9 w-auto md:h-10" />

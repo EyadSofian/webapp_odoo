@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import clsx from 'clsx'
-import { ArrowLeft, Award, Bell, BellRing, BookOpen, CalendarDays, ClipboardCheck, Download, FileCheck2, MessagesSquare, Share, Sparkles } from 'lucide-react'
+import { ArrowLeft, Bell, BellRing, BookOpen, CalendarDays, ClipboardCheck, Download, FileCheck2, Share, Sparkles } from 'lucide-react'
 import { api } from '../lib/api'
 import { useI18n } from '../lib/i18n'
 import { dayKey, formatDate, relativeDay } from '../lib/format'
@@ -34,8 +34,6 @@ export function HomeScreen() {
     <div className="mx-auto max-w-[1280px] md:px-8 md:pt-8">
       {/* Greeting band in the website's deep navy, the page's one dark block */}
       <section className="relative overflow-hidden bg-[#001D35] pt-safe text-white md:rounded-[24px]">
-        <div aria-hidden className="pointer-events-none absolute inset-0 [background-image:linear-gradient(rgb(255_255_255/0.05)_1px,transparent_1px),linear-gradient(90deg,rgb(255_255_255/0.05)_1px,transparent_1px)] [background-size:32px_32px] [mask-image:linear-gradient(to_left,black,transparent_85%)] ltr:[mask-image:linear-gradient(to_right,black,transparent_85%)]" />
-        <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-l from-[#1B57D6] via-[#1B57D6]/40 to-transparent" />
         <div className="relative flex h-14 items-center justify-between px-4 md:hidden">
           <Logo variant="white" className="h-8 w-auto" />
           <Link to="/notifications" className="relative grid h-10 w-10 place-items-center rounded-full bg-white/10 text-white" aria-label={t('notifications')}>
@@ -52,6 +50,20 @@ export function HomeScreen() {
                 ? (lang === 'ar' ? `محاضرتك القادمة ${relativeDay(data.nextSession.start!, lang)}. يُتاح الدخول قبل موعدها بربع ساعة.` : `Your next session is ${relativeDay(data.nextSession.start!, lang)}. You can join 15 minutes before it starts.`)
                 : (lang === 'ar' ? 'تابع دوراتك من حيث توقفت.' : 'Pick up where you left off.')}
             </p>
+            {data && (
+              <div className="mt-6 flex items-stretch">
+                {[
+                  { to: '/courses?tab=live', value: data.liveCourses.length, label: t('liveCourses') },
+                  { to: '/chats', value: badges?.messages ?? data.unreadMessages, label: t('newMessages') },
+                  { to: '/certificates', value: data.certificateCount, label: t('certificates') },
+                ].map(({ to, value, label }, i) => (
+                  <Link key={to} to={to} className={clsx('min-w-0 pe-5 transition-opacity hover:opacity-80 md:pe-8', i > 0 && 'border-s border-white/15 ps-5 md:ps-8')}>
+                    <CountUp value={value} className="num block text-[22px] font-bold leading-7 md:text-[28px] md:leading-9" />
+                    <span className="block truncate text-[12px] text-white/65 md:text-[13px]">{label}</span>
+                  </Link>
+                ))}
+              </div>
+            )}
           </motion.div>
           <div className="hidden md:block">
             {data?.nextSession && <NextSessionCard session={data.nextSession} instructor={nextCourse?.instructor?.name} channelId={nextCourse?.courseChannelId} />}
@@ -157,21 +169,6 @@ export function HomeScreen() {
           </div>
 
           <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
-            {data && (
-              <div className="grid grid-cols-3 gap-3 lg:grid-cols-1">
-                {[
-                  { to: '/courses?tab=live', icon: CalendarDays, value: data.liveCourses.length, label: t('liveCourses'), tone: 'text-accent' },
-                  { to: '/chats', icon: MessagesSquare, value: badges?.messages ?? data.unreadMessages, label: t('newMessages'), tone: 'text-accent' },
-                  { to: '/certificates', icon: Award, value: data.certificateCount, label: t('certificates'), tone: 'text-gold' },
-                ].map(({ to, icon: Icon, value, label, tone }) => (
-                  <Link key={to} to={to} className="card lift flex flex-col items-start gap-1 p-3 lg:flex-row lg:items-center lg:gap-4 lg:p-4">
-                    <span className="grid h-9 w-9 place-items-center rounded-xl bg-sunken lg:h-11 lg:w-11"><Icon className={clsx('h-5 w-5', tone)} /></span>
-                    <CountUp value={value} className="num text-xl font-bold lg:order-last lg:text-2xl" />
-                    <span className="text-[12px] text-muted lg:flex-1 lg:text-sm">{label}</span>
-                  </Link>
-                ))}
-              </div>
-            )}
             <SetupCard />
             {pending.data && pending.data.length === 0 && data && (
               <div className="card flex items-center gap-3 p-4 text-sm"><FileCheck2 className="h-5 w-5 text-ok" />{t('allDone')}</div>
